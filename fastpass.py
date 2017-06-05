@@ -11,10 +11,11 @@ POSTS_PER_PAGE = os.getenv('FASTPASS_POSTS_PER_PAGE', 30)
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
+REDIS_USE_SSL = os.getenv('FASTPASS_REDIS_USE_SSL', False)
 CACHE_EXPIRE_SECONDS = os.getenv('FASTPASS_CACHE_EXPIRE_SECONDS', 180)
 
 app = Flask(__name__)
-redis_conn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD)
+redis_conn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, ssl=REDIS_USE_SSL)
 
 requests_cache.install_cache('fastpass_cache', backend='redis',
                              expire_after=CACHE_EXPIRE_SECONDS, connection=redis_conn)
