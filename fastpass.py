@@ -1,6 +1,7 @@
 # import time
+from pprint import pprint
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 import requests
 import requests_cache
@@ -21,21 +22,34 @@ app = Flask(__name__)
 #                              expire_after=CACHE_EXPIRE_SECONDS, connection=redis_conn)
 mem_cache = {}
 
+
 def _store_in_cache(url, data, expire_time=None, expire_seconds=CACHE_EXPIRE_SECONDS):
     if not expire_time:
-        expire_time = datetime.now() + timedelta(seconds=expire_seconds)
+        expiry = datetime.utcnow() + timedelta(seconds=expire_seconds)
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    else:
+        expiry = expire_time
+
     val = {
         'data': data,
-        'expire_at': expire_time.timestamp(),
+        'expire_at': expiry,
     }
+    print('Now from _store_in_cache:')
+    pprint(expiry)
     mem_cache[url] = val
 
 def _get_from_cache(url):
+    now = datetime.utcnow()
+    now = now.replace(tzinfo=timezone.utc)
+    print('Now from _get_from_cache:')
+    pprint(now)
     if url not in mem_cache:
         return None
-    if mem_cache[url]['expire_at'] >= datetime.now().timestamp():
+    if mem_cache[url]['expire_at'] >= now:
+        print('e {} - c {}'.format(mem_cache[url]['expire_at'], now))
         return mem_cache[url]['data']
     else:
+        print('DEL e {} - c {}'.format(mem_cache[url]['expire_at'], now))
         del mem_cache[url]
         return None
 
@@ -44,7 +58,7 @@ def _get_from_cache(url):
 @app.route('/posts', defaults={'page': 1})
 def posts(page):
     url = 'http://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}'.format(POSTS_PER_PAGE, page)
-    print(url)
+    # print(url)
     response_dict =  _get_from_cache(url)
     if not response_dict:
         headers = {
@@ -53,7 +67,21 @@ def posts(page):
         response = requests.get(url, headers=headers)
         response_dict = response.json()
         _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
 
+
+@app.route('/radio')
+def radio():
+    url = 'https://wdwnt.airtime.pro/api/live-info'
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        response = requests.get(url)
+        response_dict = response.json()
+        print('Fresh call')
+        ending = datetime.strptime(response_dict['current']['ends'], '%Y-%m-%d %H:%M:%S')
+        ending = ending.replace(tzinfo=timezone.utc)
+        # pprint(ending)
+        _store_in_cache(url, response_dict, expire_time=ending)
     return jsonify(response_dict)
 
 
