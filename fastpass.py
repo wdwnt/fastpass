@@ -19,18 +19,21 @@ mem_cache = {}
 
 
 def format_airtime(in_data):
-    result = {'current': {}, 'currentShow': []}
+    result = {'current': {}, 'currentShow': [], 'next': {}}
     result['current']['ends'] = in_data.get('current', {}).get('ends')
-    for field in ('track_title', 'artist_title', 'length'):
-        result['current'][field] = in_data.get('current', {})\
-            .get('metadata', {})\
-            .get(field)
+    for song in ('current', 'next'):
+        md_block = {}
+        for field in ('track_title', 'artist_name', 'length'):
+            md_block[field] = in_data.get(song, {})\
+                .get('metadata', {})\
+                .get(field)
+        result[song]['metadata'] = md_block
     if len(in_data.get('currentShow', [])):
         show_data = in_data['currentShow'][0]
-        show_field = {}
+        show_block = {}
         for field in ('name', 'image_path'):
-            show_field[field] = show_data.get(field)
-        result['currentShow'].append(show_field)
+            show_block[field] = show_data.get(field)
+        result['currentShow'].append(show_block)
 
     return result
 
