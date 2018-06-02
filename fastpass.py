@@ -2,9 +2,10 @@
 
 import os
 from datetime import datetime, timedelta, timezone
+import html
 
 import requests
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 SERVER_PORT = os.getenv('FASTPASS_HOST_PORT', 80)
 POSTS_PER_PAGE = os.getenv('FASTPASS_POSTS_PER_PAGE', 30)
@@ -37,6 +38,17 @@ def format_airtime(in_data):
 
     return result
 
+def format_wp(in_data):
+    result = []
+    for post in posts:
+        obj = {}
+        obj['short_URL'] = post.get('guid',{}).get('rendered')
+        obj['title'] = html.unescape(post.get('title',{}).get('rendered', ''))
+        # TODO - Author
+        # TODO - Featured Image
+        result.append(obj)
+    return result
+
 
 def _store_in_cache(url, data, expire_time=None,
                     expire_seconds=CACHE_EXPIRE_SECONDS):
@@ -65,11 +77,12 @@ def _get_from_cache(url):
         return None
 
 
-@app.route('/posts/<int:page>')
-@app.route('/posts', defaults={'page': 1})
-def posts(page):
-    url = 'http://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}'
-    url = url.format(POSTS_PER_PAGE, page)
+@app.route('/posts')
+def posts():
+    per_page = request.args.get('per_page', POSTS_PER_PAGE)
+    page = request.args.get('page', 1)
+    url = 'http://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
+    url = url.format(per_page, page)
     # print(url)
     response_dict = _get_from_cache(url)
     if not response_dict:
