@@ -40,12 +40,19 @@ def format_airtime(in_data):
 
 def format_wp(in_data):
     result = []
-    for post in posts:
+    for post in in_data:
         obj = {}
         obj['short_URL'] = post.get('guid',{}).get('rendered')
         obj['title'] = html.unescape(post.get('title',{}).get('rendered', ''))
-        # TODO - Author
+        authors = post.get('_embedded', {}).get('author', [])
+        obj['author'] = {}
+        obj['author']['name'] = ','.join([x.get('name') for x in authors])
         # TODO - Featured Image
+        media = post.get('_embedded', {}).get('wp:featuredmedia', [])
+        if media:
+            obj['featured_image'] = media[0].get('source_url')
+        else:
+            obj['featured_image'] = ''
         result.append(obj)
     return result
 
@@ -91,7 +98,7 @@ def posts():
                           'AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/50.0.2661.102 Safari/537.36'}
         response = requests.get(url, headers=headers)
-        response_dict = response.json()
+        response_dict = format_wp(response.json())
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
 
