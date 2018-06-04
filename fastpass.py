@@ -38,14 +38,15 @@ def format_airtime(in_data):
 
     return result
 
-def format_wp(in_data):
+
+def format_wp(in_data, with_content=False):
     result = []
     for post in in_data:
-        obj = {}
-        obj['short_URL'] = post.get('guid',{}).get('rendered')
-        obj['title'] = html.unescape(post.get('title',{}).get('rendered', ''))
+        obj = dict(author={})
+        obj['short_URL'] = post.get('guid', {}).get('rendered')
+        obj['title'] = html.unescape(post.get('title', {}).get('rendered', ''))
+        obj['date'] = post.get('date_gmt')
         authors = post.get('_embedded', {}).get('author', [])
-        obj['author'] = {}
         obj['author']['name'] = ','.join([x.get('name') for x in authors])
         # TODO - Featured Image
         media = post.get('_embedded', {}).get('wp:featuredmedia', [])
@@ -53,6 +54,9 @@ def format_wp(in_data):
             obj['featured_image'] = media[0].get('source_url')
         else:
             obj['featured_image'] = ''
+
+        if with_content:
+            obj['content'] = post.get('content', {}).get('rendered', '')
         result.append(obj)
     return result
 
@@ -82,6 +86,26 @@ def _get_from_cache(url):
     else:
         del mem_cache[url]
         return None
+
+
+@app.route('/podcasts')
+def posts():
+    per_page = request.args.get('per_page', POSTS_PER_PAGE)
+    page = request.args.get('page', 1)
+    url = 'http://podcasts.wdwnt.com/wp-json/wp/v2/posts?' \
+          'per_page={}&page={}&_embed'
+    url = url.format(per_page, page)
+    # print(url)
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/50.0.2661.102 Safari/537.36'}
+        response = requests.get(url, headers=headers)
+        response_dict = format_wp(response.json(), with_content=True)
+        _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
 
 
 @app.route('/posts')
