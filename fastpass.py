@@ -7,12 +7,16 @@ import html
 import requests
 from flask import Flask, jsonify, request
 
+CACHE_EXPIRE_SECONDS = os.getenv('FASTPASS_CACHE_EXPIRE_SECONDS', 180)
 SERVER_PORT = os.getenv('FASTPASS_HOST_PORT', 80)
 POSTS_PER_PAGE = os.getenv('FASTPASS_POSTS_PER_PAGE', 30)
+YOUTUBE_VIDS_PER_PAGE = os.getenv('FASTPASS_YOUTUBE_VIDS_PER_PAGE', 30)
+YOUTUBE_API_KEY = os.getenv('FASTPASS_YOUTUBE_API_KEY', None)
+YOUTUBE_PLAYLIST_ID = os.getenv('FASTPASS_YOUTUBE_PLAYLIST_ID', None)
+YOUTUBE_EXPIRE_SECONDS = os.getenv('FASTPASS_YOUTUBE_EXPIRE_SECONDS', CACHE_EXPIRE_SECONDS)
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
-CACHE_EXPIRE_SECONDS = os.getenv('FASTPASS_CACHE_EXPIRE_SECONDS', 180)
 
 app = Flask(__name__)
 
@@ -61,6 +65,21 @@ def format_wp(in_data, with_content=False):
     return result
 
 
+def format_youtube(in_data):
+    result = {'items': []}
+    result['nextPageToken'] = in_data.get('nextPageToken')
+    result['prevPageToken'] = in_data.get('prevPageToken')
+    for x in in_data.get('items', []):
+        obj = dict(snippet=dict(resourceId={}, thumbnails={'default': {}}))
+        obj['snippet']['resourceId']['videoId'] = \
+            x.get('snippet', {}).get('resourceId', {}).get('videoId')
+        obj['snippet']['thumbnails']['default']['url'] = \
+            x.get('snippet', {}).get('thumbnails', {}).get('default', {}).get('url')
+        obj['snippet']['title'] =  x.get('snippet', {}).get('title')
+        result['items'].append(obj)
+    return result
+
+
 def _store_in_cache(url, data, expire_time=None,
                     expire_seconds=CACHE_EXPIRE_SECONDS):
     if not expire_time:
@@ -88,11 +107,32 @@ def _get_from_cache(url):
         return None
 
 
+@app.route('/youtube')
+def youtube():
+    max_results = request.args.get('maxResults', YOUTUBE_VIDS_PER_PAGE)
+    page_token = request.args.get('page_token', None)
+    if not (YOUTUBE_API_KEY and YOUTUBE_PLAYLIST_ID):
+        return jsonify({})
+    url = 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet' \
+          '&maxResults={}&playlistId={}&key={}'.format(max_results,
+                                                       YOUTUBE_PLAYLIST_ID,
+                                                       YOUTUBE_API_KEY)
+    if page_token:
+        url += '&pageToken={}'.format(page_token)
+
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        response = requests.get(url)
+        response_dict = format_youtube(response.json())
+        _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
+
+
 @app.route('/podcasts')
-def posts():
+def podcasts():
     per_page = request.args.get('per_page', POSTS_PER_PAGE)
     page = request.args.get('page', 1)
-    url = 'http://podcasts.wdwnt.com/wp-json/wp/v2/posts?' \
+    url = 'https://podcasts.wdwnt.com/wp-json/wp/v2/posts?' \
           'per_page={}&page={}&_embed'
     url = url.format(per_page, page)
     # print(url)
@@ -112,7 +152,7 @@ def posts():
 def posts():
     per_page = request.args.get('per_page', POSTS_PER_PAGE)
     page = request.args.get('page', 1)
-    url = 'http://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
+    url = 'https://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
     url = url.format(per_page, page)
     # print(url)
     response_dict = _get_from_cache(url)
