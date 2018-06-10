@@ -76,7 +76,7 @@ def format_youtube(in_data):
             x.get('snippet', {}).get('resourceId', {}).get('videoId')
         obj['snippet']['thumbnails']['default']['url'] = \
             x.get('snippet', {}).get('thumbnails', {}).get('default', {}).get('url')
-        obj['snippet']['title'] =  x.get('snippet', {}).get('title')
+        obj['snippet']['title'] = x.get('snippet', {}).get('title')
         result['items'].append(obj)
     return result
 
