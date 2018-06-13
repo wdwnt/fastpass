@@ -114,11 +114,9 @@ def _get_from_cache(url):
 def youtube():
     max_results = request.args.get('maxResults', YOUTUBE_VIDS_PER_PAGE)
     page_token = request.args.get('page_token', None)
-    print(max_results)
-    print(YOUTUBE_API_KEY)
-
+    
     if not (YOUTUBE_API_KEY and YOUTUBE_PLAYLIST_ID):
-        return jsonify({'matt':YOUTUBE_API_KEY})
+        return jsonify({})
     url = 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet' \
           '&maxResults={}&playlistId={}&key={}'.format(max_results,
                                                        YOUTUBE_PLAYLIST_ID,
