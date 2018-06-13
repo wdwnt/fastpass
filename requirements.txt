@@ -1,3 +1,4 @@
 Flask
 redis
 requests
+flask-cors
