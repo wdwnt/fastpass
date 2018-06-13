@@ -6,6 +6,7 @@ import html
 
 import requests
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 CACHE_EXPIRE_SECONDS = os.getenv('FASTPASS_CACHE_EXPIRE_SECONDS', 180)
 SERVER_PORT = os.getenv('FASTPASS_HOST_PORT', 5000)
@@ -20,6 +21,7 @@ REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
 REDIS_USE_SSL = os.getenv('FASTPASS_REDIS_USE_SSL', False)
 
 app = Flask(__name__)
+CORS(app)
 
 mem_cache = {}
 
@@ -112,8 +114,11 @@ def _get_from_cache(url):
 def youtube():
     max_results = request.args.get('maxResults', YOUTUBE_VIDS_PER_PAGE)
     page_token = request.args.get('page_token', None)
+    print(max_results)
+    print(YOUTUBE_API_KEY)
+
     if not (YOUTUBE_API_KEY and YOUTUBE_PLAYLIST_ID):
-        return jsonify({})
+        return jsonify({'matt':YOUTUBE_API_KEY})
     url = 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet' \
           '&maxResults={}&playlistId={}&key={}'.format(max_results,
                                                        YOUTUBE_PLAYLIST_ID,
