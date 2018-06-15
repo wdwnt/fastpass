@@ -55,12 +55,22 @@ def format_wp(in_data, with_content=False):
         obj['date'] = post.get('date_gmt')
         authors = post.get('_embedded', {}).get('author', [])
         obj['author']['name'] = ','.join([x.get('name') for x in authors])
-        # TODO - Featured Image
+
         media = post.get('_embedded', {}).get('wp:featuredmedia', [])
         if media:
             obj['featured_image'] = media[0].get('source_url')
         else:
             obj['featured_image'] = ''
+
+        term = post.get('_embedded', {}).get('wp:term', [])
+        if term:
+            try:
+                term_val = term[0][0].get('name', '')
+                obj['category'] = html.unescape(term_val)
+            except KeyError:
+                obj['category'] = ''
+        else:
+            obj['category'] = ''
 
         if with_content:
             obj['content'] = post.get('content', {}).get('rendered', '')
