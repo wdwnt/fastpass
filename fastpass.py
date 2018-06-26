@@ -85,9 +85,8 @@ def format_wp(in_data, with_content=False):
 
 
 def format_youtube(in_data):
-    result = {'items': []}
-    result['nextPageToken'] = in_data.get('nextPageToken')
-    result['prevPageToken'] = in_data.get('prevPageToken')
+    result = {'items': [], 'nextPageToken': in_data.get('nextPageToken'),
+              'prevPageToken': in_data.get('prevPageToken')}
     for x in in_data.get('items', []):
         obj = dict(snippet=dict(resourceId={}, thumbnails={'default': {}}))
         obj['snippet']['resourceId']['videoId'] = \
