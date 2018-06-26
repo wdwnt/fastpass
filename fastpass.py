@@ -5,10 +5,12 @@ from datetime import datetime, timedelta, timezone
 import html
 
 import requests
+import redis
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 CACHE_EXPIRE_SECONDS = os.getenv('FASTPASS_CACHE_EXPIRE_SECONDS', 180)
+CACHE_SYSTEM = os.getenv('FASTPASS_CACHE_SYSTEM', 'memory')
 SERVER_PORT = os.getenv('FASTPASS_HOST_PORT', 5000)
 POSTS_PER_PAGE = os.getenv('FASTPASS_POSTS_PER_PAGE', 30)
 YOUTUBE_VIDS_PER_PAGE = os.getenv('FASTPASS_YOUTUBE_VIDS_PER_PAGE', 30)
@@ -24,6 +26,10 @@ app = Flask(__name__)
 CORS(app)
 
 mem_cache = {}
+redis_db = redis.StrictRedis(host=REDIS_HOST,
+                             port=REDIS_PORT,
+                             password=REDIS_PASSWORD,
+                             ssl=REDIS_USE_SSL)
 
 
 def format_airtime(in_data):
@@ -95,29 +101,36 @@ def format_youtube(in_data):
 
 def _store_in_cache(url, data, expire_time=None,
                     expire_seconds=CACHE_EXPIRE_SECONDS):
+
     if not expire_time:
         expiry = datetime.utcnow() + timedelta(seconds=expire_seconds)
         expiry = expiry.replace(tzinfo=timezone.utc)
     else:
         expiry = expire_time
 
-    val = {
-        'data': data,
-        'expire_at': expiry.timestamp(),
-    }
-    mem_cache[url] = val
+    if CACHE_SYSTEM == 'redis':
+        redis_db.set(url, data, expire_seconds)
+    else:
+        val = {
+            'data': data,
+            'expire_at': expiry.timestamp(),
+        }
+        mem_cache[url] = val
 
 
 def _get_from_cache(url):
     now = datetime.utcnow()
     now = now.replace(tzinfo=timezone.utc)
-    if url not in mem_cache:
-        return None
-    if mem_cache[url]['expire_at'] >= now.timestamp():
-        return mem_cache[url]['data']
+    if CACHE_SYSTEM == 'redis':
+        redis_db.get(url)
     else:
-        del mem_cache[url]
-        return None
+        if url not in mem_cache:
+            return None
+        if mem_cache[url]['expire_at'] >= now.timestamp():
+            return mem_cache[url]['data']
+        else:
+            del mem_cache[url]
+            return None
 
 
 @app.route('/youtube')
