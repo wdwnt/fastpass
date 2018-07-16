@@ -6,6 +6,7 @@ import html
 
 import requests
 import redis
+import ftfy
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -38,9 +39,9 @@ def format_airtime(in_data):
     for song in ('current', 'next'):
         md_block = {}
         for field in ('track_title', 'artist_name', 'length'):
-            md_block[field] = in_data.get(song, {})\
+            md_block[field] = ftfy.fix_text(in_data.get(song, {})\
                 .get('metadata', {})\
-                .get(field)
+                .get(field))
         result[song]['metadata'] = md_block
     if len(in_data.get('currentShow', [])):
         show_data = in_data['currentShow'][0]
