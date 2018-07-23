@@ -39,9 +39,8 @@ def format_airtime(in_data):
     for song in ('current', 'next'):
         md_block = {}
         for field in ('track_title', 'artist_name', 'length'):
-            md_block[field] = ftfy.fix_text(in_data.get(song, {})\
-                .get('metadata', {})\
-                .get(field))
+            raw_text = in_data.get(song, {}).get('metadata', {}).get(field)
+            md_block[field] = ftfy.fix_text(raw_text) if raw_text else raw_text
         result[song]['metadata'] = md_block
     if len(in_data.get('currentShow', [])):
         show_data = in_data['currentShow'][0]
