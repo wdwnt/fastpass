@@ -91,7 +91,7 @@ def format_youtube(in_data):
     result = {'items': [], 'nextPageToken': in_data.get('nextPageToken'),
               'prevPageToken': in_data.get('prevPageToken')}
     for x in in_data.get('items', []):
-        obj = dict(snippet=dict(resourceId={}, thumbnails={tnq: {}}))
+        obj = dict(snippet=dict(resourceId={}, thumbnails={'default': {}}))
         obj['snippet']['resourceId']['videoId'] = \
             x.get('snippet', {}).get('resourceId', {}).get('videoId')
         obj['snippet']['thumbnails']['default']['url'] = \
