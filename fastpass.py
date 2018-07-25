@@ -19,6 +19,7 @@ YOUTUBE_VIDS_PER_PAGE = os.getenv('FASTPASS_YOUTUBE_VIDS_PER_PAGE', 30)
 YOUTUBE_API_KEY = os.getenv('FASTPASS_YOUTUBE_API_KEY', None)
 YOUTUBE_PLAYLIST_ID = os.getenv('FASTPASS_YOUTUBE_PLAYLIST_ID', None)
 YOUTUBE_EXPIRE_SECONDS = os.getenv('FASTPASS_YOUTUBE_EXPIRE_SECONDS', CACHE_EXPIRE_SECONDS)
+YOUTUBE_THUMBNAIL_QUALITY = os.getenv('FASTPASS_YOUTUBE_THUMBNAIL_QUALITY', 'default')
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
@@ -86,13 +87,14 @@ def format_wp(in_data, with_content=False):
 
 
 def format_youtube(in_data):
+    tnq = YOUTUBE_THUMBNAIL_QUALITY
     result = {'items': [], 'nextPageToken': in_data.get('nextPageToken'),
               'prevPageToken': in_data.get('prevPageToken')}
     for x in in_data.get('items', []):
         obj = dict(snippet=dict(resourceId={}, thumbnails={'default': {}}))
         obj['snippet']['resourceId']['videoId'] = \
             x.get('snippet', {}).get('resourceId', {}).get('videoId')
-        obj['snippet']['thumbnails']['default']['url'] = \
+        obj['snippet']['thumbnails'][tnq]['url'] = \
             x.get('snippet', {}).get('thumbnails', {}).get('default', {}).get('url')
         obj['snippet']['title'] = x.get('snippet', {}).get('title')
         result['items'].append(obj)
