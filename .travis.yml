@@ -5,11 +5,8 @@ services:
   - docker
 before_install:
   - docker build -t wdwnt/fastpass:latest .
-deploy:
-  provider: script
-  script: bash docker_buildpush.sh
-  on:
-    branch: master
+script:
+  - bash docker_push.sh
 env:
   global:
   - secure: Mi6bd2HD/y+09CU8/vqU1AFMg1UW3AWylKef6zgL6udRGX1u8r/RkXsWyBlrZu3y4Lz7Gl2r1Zp+0ojRJkU9yI8JsSYTE5LaAJJxqe9UyEAKhGUUbJdDogE+X5s+4v11C6x2blF3SVeOfRyzDC5vZlfFSH0U1jeVrOBZP1XlBatyyBiXX/PDl/PRuE9PFKrhOUj49FUUiAfNsOo89tah6CZV2kYL4wyMDjm/jS28WyKLLy0C+tbtyAeLtrG6f7p2uFUxkpfBfB9KLKNPxzPjhd201tI6kUeh5liz71D6j2NAwHcCe3MESZ+3JyybrfFP/qx2VW3ZTuX4w4CKU01H+gAMVg11cnX6dUowefNYZREaA2Em1u1nKdF8XnugHNGXAAKDRy8vzMH3Nxbwn9vPV9w9r+MxpKpJHrbZflHD17vOhDdfJR5ze0zaPJMnLRHSFp4G3WT6usYHq6jhIL3KaLs+uCor3PtURFpGgEw3JNwE8aJnQQKls15R7nr8myxQymUBiVtiOGUyyy2FD2Eq8HiaTb3v1TI+IrOoLmN3wp8tG9Mza9lDKdIiWjW9tZT1/SyjUFHNBxrEsW1DYjEhqz987SRP4//obQGos9zAP1uYF9T85iufqpLsuUwWSmPYuL5JDWIvsL1d3zXT5v8FohinG33gyoyNLbjzZeB9KKE=
