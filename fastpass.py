@@ -91,11 +91,11 @@ def format_youtube(in_data):
     result = {'items': [], 'nextPageToken': in_data.get('nextPageToken'),
               'prevPageToken': in_data.get('prevPageToken')}
     for x in in_data.get('items', []):
-        obj = dict(snippet=dict(resourceId={}, thumbnails={'default': {}}))
+        obj = dict(snippet=dict(resourceId={}, thumbnails={tnq: {}}))
         obj['snippet']['resourceId']['videoId'] = \
             x.get('snippet', {}).get('resourceId', {}).get('videoId')
-        obj['snippet']['thumbnails'][tnq]['url'] = \
-            x.get('snippet', {}).get('thumbnails', {}).get('default', {}).get('url')
+        obj['snippet']['thumbnails']['default']['url'] = \
+            x.get('snippet', {}).get('thumbnails', {}).get(tnq, {}).get('url')
         obj['snippet']['title'] = x.get('snippet', {}).get('title')
         result['items'].append(obj)
     return result
