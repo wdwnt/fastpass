@@ -3,6 +3,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 import html
+import subprocess
 
 import requests
 import redis
@@ -130,6 +131,13 @@ def _get_from_cache(url):
         else:
             del mem_cache[url]
             return None
+
+
+@app.route('/settings')
+def settings_call():
+    ver = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
+    # TODO - Expand with more settings like environment variables.
+    return jsonify({'version': ver.decode().rstrip()})
 
 
 @app.route('/youtube')
