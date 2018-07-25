@@ -1,5 +1,8 @@
+language: python
 services:
   - docker
+before_install:
+  - docker build -t wdwnt/fastpass:latest .
 deploy:
   provider: script
   script: bash docker_buildpush.sh
