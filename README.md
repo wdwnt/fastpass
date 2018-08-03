@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/wdwnt/fastpass.svg?branch=master)](https://travis-ci.org/wdwnt/fastpass) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![FastPass](https://img.shields.io/badge/wdwnt-fastpass-blue.svg) [![Build Status](https://travis-ci.org/wdwnt/fastpass.svg?branch=master)](https://travis-ci.org/wdwnt/fastpass) ![Docker Pulls](https://img.shields.io/docker/pulls/wdwnt/fastpass.svg) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
 # fastpass
