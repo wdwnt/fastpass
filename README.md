@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/wdwnt/fastpass.svg?branch=master)](https://travis-ci.org/wdwnt/fastpass) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+
 # fastpass
 Server caching for API calls
 
