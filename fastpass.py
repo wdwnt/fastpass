@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta, timezone
 import html
 import subprocess
+from urllib.parse import urlparse
 
 import requests
 import redis
@@ -57,11 +58,12 @@ def format_airtime(in_data):
 def format_wp(in_data, with_content=False):
     result = []
     for post in in_data:
+        raw_url = urlparse(post.get('guid', {}).get('rendered', ''))
         obj = dict(author={})
-        obj['short_URL'] = post.get('guid', {}).get('rendered')
+        obj['id'] = post.get('id')
+        obj['short_URL'] = 'https://{}/?p={}'.format(raw_url.netloc, obj['id'])
         obj['title'] = html.unescape(post.get('title', {}).get('rendered', ''))
         obj['date'] = post.get('date_gmt')
-        obj['id'] = post.get('id')
         authors = post.get('_embedded', {}).get('author', [])
         obj['author']['name'] = ','.join([x.get('name') for x in authors])
 
