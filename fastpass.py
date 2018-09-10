@@ -12,6 +12,20 @@ import ftfy
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+
+def _setup_podcast_categories():
+    # TODO - If we get more than the first page of search results
+    url = 'https://wdwnt.com/wp-json/wp/v2/categories?search=podcast-feed'
+    try:
+        response = requests.get(url, headers=WP_HEADER)
+        response_data = response.json()
+        ids = [str(x.get('id')) for x in response_data
+               if x.get('id') is not None]
+        return ','.join(ids)
+    except BaseException:
+        return None
+
+
 CACHE_EXPIRE_SECONDS = os.getenv('FASTPASS_CACHE_EXPIRE_SECONDS', 180)
 CACHE_SYSTEM = os.getenv('FASTPASS_CACHE_SYSTEM', 'memory')
 SERVER_PORT = os.getenv('FASTPASS_HOST_PORT', 5000)
@@ -25,6 +39,12 @@ REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
 REDIS_USE_SSL = os.getenv('FASTPASS_REDIS_USE_SSL', False)
+WP_HEADER = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
+                           'AppleWebKit/537.36 (KHTML, like Gecko) '
+                           'Chrome/50.0.2661.102 Safari/537.36'}
+PODCAST_CATEGORIES = _setup_podcast_categories()
+DEFAULT_PODCAST_CATEGORIES = os.getenv('FASTPASS_PODCAST_DEFAULT_CATEGORIES',
+                                       '6594,4264,4266,4270,4265,4267,4268')
 
 app = Flask(__name__)
 CORS(app)
@@ -171,17 +191,15 @@ def youtube():
 def podcasts():
     per_page = request.args.get('per_page', POSTS_PER_PAGE)
     page = request.args.get('page', 1)
-    url = 'https://podcasts.wdwnt.com/wp-json/wp/v2/posts?' \
+    categories = PODCAST_CATEGORIES if PODCAST_CATEGORIES \
+        else DEFAULT_PODCAST_CATEGORIES
+    url = 'https://wdwnt.com/wp-json/wp/v2/posts?categories={}&' \
           'per_page={}&page={}&_embed'
-    url = url.format(per_page, page)
+    url = url.format(categories, per_page, page)
     # print(url)
     response_dict = _get_from_cache(url)
     if not response_dict:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/50.0.2661.102 Safari/537.36'}
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=WP_HEADER)
         response_dict = format_wp(response.json(), with_content=True)
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
@@ -196,11 +214,7 @@ def posts():
     # print(url)
     response_dict = _get_from_cache(url)
     if not response_dict:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/50.0.2661.102 Safari/537.36'}
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=WP_HEADER)
         response_dict = format_wp(response.json())
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
