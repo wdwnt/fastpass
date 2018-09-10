@@ -61,6 +61,7 @@ def format_wp(in_data, with_content=False):
         obj['short_URL'] = post.get('guid', {}).get('rendered')
         obj['title'] = html.unescape(post.get('title', {}).get('rendered', ''))
         obj['date'] = post.get('date_gmt')
+        obj['id'] = post.get('id')
         authors = post.get('_embedded', {}).get('author', [])
         obj['author']['name'] = ','.join([x.get('name') for x in authors])
 
