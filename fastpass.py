@@ -38,7 +38,8 @@ redis_db = redis.StrictRedis(host=REDIS_HOST,
 
 def format_airtime(in_data):
     result = {'current': {}, 'currentShow': [], 'next': {}}
-    result['current']['ends'] = in_data.get('current', {}).get('ends')
+    for field in ('ends', 'type'):
+        result['current'][field] = in_data.get('current', {}).get(field)
     for song in ('current', 'next'):
         md_block = {}
         for field in ('track_title', 'artist_name', 'length'):
@@ -214,10 +215,16 @@ def radio():
     if not response_dict:
         response = requests.get(url)
         response_dict = format_airtime(response.json())
-        ending = datetime.strptime(response_dict['current']['ends'], date_form)
-        ending = ending.replace(tzinfo=timezone.utc)
-        # pprint(ending)
-        _store_in_cache(url, response_dict, expire_time=ending)
+        if response_dict['current']['type'] == 'livestream':
+            expiry = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
+            expiry = expiry.replace(tzinfo=timezone.utc)
+            response_dict['current']['ends'] = datetime.strftime(expiry, date_form)
+            _store_in_cache(url, response_dict)
+        else:
+            ending = datetime.strptime(response_dict['current']['ends'], date_form)
+            ending = ending.replace(tzinfo=timezone.utc)
+            # pprint(ending)
+            _store_in_cache(url, response_dict, expire_time=ending)
     return jsonify(response_dict)
 
 
