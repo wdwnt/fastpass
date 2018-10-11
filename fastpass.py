@@ -172,19 +172,21 @@ def youtube():
 def podcasts():
     per_page = request.args.get('per_page', POSTS_PER_PAGE)
     page = request.args.get('page', 1)
+    with_content = not 'nocontent' in request.args
     url = 'https://podcasts.wdwnt.com/wp-json/wp/v2/posts?' \
           'per_page={}&page={}&_embed'
     url = url.format(per_page, page)
+    cache_url = '{}|{}'.format('WithContent' if with_content else 'NoContent', url)
     # print(url)
-    response_dict = _get_from_cache(url)
+    response_dict = _get_from_cache(cache_url)
     if not response_dict:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
                           'AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/50.0.2661.102 Safari/537.36'}
         response = requests.get(url, headers=headers)
-        response_dict = format_wp(response.json(), with_content=True)
-        _store_in_cache(url, response_dict)
+        response_dict = format_wp(response.json(), with_content=with_content)
+        _store_in_cache(cache_url, response_dict)
     return jsonify(response_dict)
 
 
