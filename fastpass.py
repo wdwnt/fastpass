@@ -90,6 +90,48 @@ def format_wp(in_data, with_content=False):
     return result
 
 
+def format_wp_single_post(in_data):
+    obj = dict(author=[])
+    obj['id'] = in_data.get('id')
+    obj['title'] = html.unescape(in_data.get('title', {}).get('rendered', ''))
+    term = in_data.get('_embedded', {}).get('wp:term', [])
+    if term:
+        try:
+            term_val = term[0][0].get('name', '')
+            obj['category'] = html.unescape(term_val)
+        except KeyError:
+            obj['category'] = ''
+    else:
+        obj['category'] = ''
+    obj['date'] = in_data.get('date_gmt')
+    obj['text'] = in_data.get('content', {}).get('rendered', '')
+    media = in_data.get('_embedded', {}).get('wp:featuredmedia', [])
+    if media:
+        obj['featured_image'] = media[0].get('source_url')
+    else:
+        obj['featured_image'] = ''
+
+    authors = in_data.get('_embedded', {}).get('author', [])
+    author_list = []
+    for x in authors:
+        author_data = {'avatar_urls': {}}
+        for f in ('id', 'name', 'description'):
+            author_data[f] = x.get(f)
+        author_data['avatar_urls']['96'] = x.get('avatar_urls', {}).get('96')
+        author_list.append(author_data)
+    obj['author'] = author_list
+
+    jrps = in_data.get('jetpack-related-posts', [])
+    jrp_list = []
+    for x in jrps:
+        jrp_data = {}
+        for f in ('id', 'title', 'img'):
+            jrp_data[f] = x.get(f)
+        jrp_list.append(jrp_data)
+    obj['jetpack-related-posts'] = jrp_list
+    return obj
+
+
 def format_youtube(in_data):
     tnq = YOUTUBE_THUMBNAIL_QUALITY
     result = {'items': [], 'nextPageToken': in_data.get('nextPageToken'),
@@ -168,14 +210,13 @@ def youtube():
     return jsonify(response_dict)
 
 
-@app.route('/podcasts')
+@app.route('/podcasts', strict_slashes=False)
 def podcasts():
-    per_page = request.args.get('per_page', POSTS_PER_PAGE)
-    page = request.args.get('page', 1)
-    with_content = not 'nocontent' in request.args
-    url = 'https://podcasts.wdwnt.com/wp-json/wp/v2/posts?' \
-          'per_page={}&page={}&_embed'
-    url = url.format(per_page, page)
+    in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
+    in_page = request.args.get('page', 1)
+    with_content = 'nocontent' not in request.args
+    url = 'https://podcasts.wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
+    url = url.format(in_per_page, in_page)
     cache_url = '{}|{}'.format('WithContent' if with_content else 'NoContent', url)
     # print(url)
     response_dict = _get_from_cache(cache_url)
@@ -190,12 +231,11 @@ def podcasts():
     return jsonify(response_dict)
 
 
-@app.route('/posts')
-def posts():
-    per_page = request.args.get('per_page', POSTS_PER_PAGE)
-    page = request.args.get('page', 1)
-    url = 'https://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
-    url = url.format(per_page, page)
+@app.route('/podcasts/<int:post_id>')
+def single_podcast(post_id):
+    # Do something with page_id
+    url = 'https://podcasts.wdwnt.com/wp-json/wp/v2/posts/{}?_embed'
+    url = url.format(post_id)
     # print(url)
     response_dict = _get_from_cache(url)
     if not response_dict:
@@ -204,7 +244,45 @@ def posts():
                           'AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/50.0.2661.102 Safari/537.36'}
         response = requests.get(url, headers=headers)
+        response_dict = format_wp_single_post(response.json())
+        _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
+
+
+@app.route('/posts', strict_slashes=False)
+def posts():
+    in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
+    in_page = request.args.get('page', 1)
+    url = 'https://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
+    url = url.format(in_per_page, in_page)
+    # print(url)
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                
+                          'Chrome/50.0.2661.102 Safari/537.36'}
+        response = requests.get(url, headers=headers)
         response_dict = format_wp(response.json())
+        _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
+
+
+@app.route('/posts/<int:post_id>')
+def single_post(post_id):
+    # Do something with page_id
+    url = 'https://wdwnt.com/wp-json/wp/v2/posts/{}?_embed'
+    url = url.format(post_id)
+    # print(url)
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/50.0.2661.102 Safari/537.36'}
+        response = requests.get(url, headers=headers)
+        response_dict = format_wp_single_post(response.json())
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
 
