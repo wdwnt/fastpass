@@ -12,6 +12,16 @@ import ftfy
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+def _setup_appflags():
+    url = 'https://wdwnt.com/wp-json/wp/v2/appflag'
+    try:
+        response = requests.get(url, headers=WP_HEADER)
+        response_data = response.json()
+        result = dict([(x['id'], x['slug']) for x in response_data])
+        return result
+    except BaseException:
+        return {}
+
 CACHE_EXPIRE_SECONDS = os.getenv('FASTPASS_CACHE_EXPIRE_SECONDS', 180)
 CACHE_SYSTEM = os.getenv('FASTPASS_CACHE_SYSTEM', 'memory')
 SERVER_PORT = os.getenv('FASTPASS_HOST_PORT', 5000)
@@ -25,6 +35,10 @@ REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
 REDIS_USE_SSL = os.getenv('FASTPASS_REDIS_USE_SSL', False)
+WP_HEADER = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
+                           'AppleWebKit/537.36 (KHTML, like Gecko) '
+                           'Chrome/50.0.2661.102 Safari/537.36'}
+WP_APPFLAGS = _setup_appflags()
 
 app = Flask(__name__)
 CORS(app)
@@ -149,7 +163,6 @@ def format_youtube(in_data):
 
 def _store_in_cache(url, data, expire_time=None,
                     expire_seconds=CACHE_EXPIRE_SECONDS):
-
     if not expire_time:
         expiry = datetime.utcnow() + timedelta(seconds=expire_seconds)
         expiry = expiry.replace(tzinfo=timezone.utc)
@@ -192,7 +205,7 @@ def settings_call():
 def youtube():
     max_results = request.args.get('maxResults', YOUTUBE_VIDS_PER_PAGE)
     page_token = request.args.get('page_token', None)
-    
+
     if not (YOUTUBE_API_KEY and YOUTUBE_PLAYLIST_ID):
         return jsonify({})
     url = 'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet' \
@@ -221,11 +234,7 @@ def podcasts():
     # print(url)
     response_dict = _get_from_cache(cache_url)
     if not response_dict:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/50.0.2661.102 Safari/537.36'}
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=WP_HEADER)
         response_dict = format_wp(response.json(), with_content=with_content)
         _store_in_cache(cache_url, response_dict)
     return jsonify(response_dict)
@@ -239,11 +248,7 @@ def single_podcast(post_id):
     # print(url)
     response_dict = _get_from_cache(url)
     if not response_dict:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/50.0.2661.102 Safari/537.36'}
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=WP_HEADER)
         response_dict = format_wp_single_post(response.json())
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
@@ -258,12 +263,7 @@ def posts():
     # print(url)
     response_dict = _get_from_cache(url)
     if not response_dict:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                
-                          'Chrome/50.0.2661.102 Safari/537.36'}
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=WP_HEADER)
         response_dict = format_wp(response.json())
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
@@ -277,14 +277,27 @@ def single_post(post_id):
     # print(url)
     response_dict = _get_from_cache(url)
     if not response_dict:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
-                          'AppleWebKit/537.36 (KHTML, like Gecko) '
-                          'Chrome/50.0.2661.102 Safari/537.36'}
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=WP_HEADER)
         response_dict = format_wp_single_post(response.json())
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
+
+
+@app.route('/announcements')
+def announcements():
+    # url = 'https://wdwnt.com/wp-json/wp/v2/announcements?appflag=7566,7568'
+    # https://wdwnt.com/wp-json/wp/v2/appflag?include=7566,7568
+    url = 'https://wdwnt.com/wp-json/wp/v2/announcements'
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        response = requests.get(url, headers=WP_HEADER)
+        response_dict = {}
+        for id, slug in WP_APPFLAGS.items():
+            response_dict[slug] = format_wp_single_post(
+                next((x for x in response.json() if x['appflag'][0] == id), {}))
+        _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
+
 
 
 @app.route('/radio')
