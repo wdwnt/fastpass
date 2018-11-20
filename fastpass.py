@@ -12,6 +12,8 @@ import ftfy
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+from youtube import YoutubeBroadcasts
+
 CACHE_EXPIRE_SECONDS = os.getenv('FASTPASS_CACHE_EXPIRE_SECONDS', 180)
 CACHE_SYSTEM = os.getenv('FASTPASS_CACHE_SYSTEM', 'memory')
 SERVER_PORT = os.getenv('FASTPASS_HOST_PORT', 5000)
@@ -21,6 +23,9 @@ YOUTUBE_API_KEY = os.getenv('FASTPASS_YOUTUBE_API_KEY', None)
 YOUTUBE_PLAYLIST_ID = os.getenv('FASTPASS_YOUTUBE_PLAYLIST_ID', None)
 YOUTUBE_EXPIRE_SECONDS = os.getenv('FASTPASS_YOUTUBE_EXPIRE_SECONDS', CACHE_EXPIRE_SECONDS)
 YOUTUBE_THUMBNAIL_QUALITY = os.getenv('FASTPASS_YOUTUBE_THUMBNAIL_QUALITY', 'default')
+BROADCAST_CLIENT_ID = os.getenv('FASTPASS_BROADCAST_CLIENT_ID', None)
+BROADCAST_CLIENT_SECRET = os.getenv('FASTPASS_BROADCAST_CLIENT_SECRET', None)
+BROADCAST_REFRESH_TOKEN = os.getenv('FASTPASS_BROADCAST_REFRESH_TOKEN', None)
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
@@ -34,6 +39,7 @@ redis_db = redis.StrictRedis(host=REDIS_HOST,
                              port=REDIS_PORT,
                              password=REDIS_PASSWORD,
                              ssl=REDIS_USE_SSL)
+
 
 
 def format_airtime(in_data):
@@ -207,6 +213,31 @@ def youtube():
         response = requests.get(url)
         response_dict = format_youtube(response.json())
         _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
+
+
+@app.route('/broadcasts', strict_slashes=False)
+def broadcasts():
+    if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
+        return jsonify({})
+    response_dict = _get_from_cache('broadcasts')
+    if not response_dict:
+        yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
+        response_dict = yb.get_broadcasts()
+        _store_in_cache('broadcasts', response_dict)
+    return jsonify(response_dict)
+
+
+@app.route('/broadcasts/wigs', strict_slashes=False)
+def wigs_broadcasts():
+    if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
+        return jsonify({})
+    response_dict = _get_from_cache('broadcasts/unlisted')
+    if not response_dict:
+        yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
+        yb.get_broadcasts(show_unlisted=True)
+        response_dict = yb.get_broadcasts()
+        _store_in_cache('broadcasts/unlisted', response_dict)
     return jsonify(response_dict)
 
 
