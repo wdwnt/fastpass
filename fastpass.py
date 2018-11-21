@@ -239,7 +239,7 @@ def broadcasts():
     if not response_dict:
         yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
         response_dict = yb.get_broadcasts()
-        _store_in_cache('broadcasts', response_dict)
+        _store_in_cache('broadcasts', response_dict, expire_seconds=BROADCAST_EXPIRE_SECONDS)
     return jsonify(response_dict)
 
 
@@ -252,7 +252,7 @@ def wigs_broadcasts():
         yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
         yb.get_broadcasts(show_unlisted=True)
         response_dict = yb.get_broadcasts()
-        _store_in_cache('broadcasts/unlisted', response_dict)
+        _store_in_cache('broadcasts/unlisted', response_dict, expire_seconds=BROADCAST_EXPIRE_SECONDS)
     return jsonify(response_dict)
 
 
