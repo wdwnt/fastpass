@@ -3,3 +3,5 @@ redis
 requests
 flask-cors
 ftfy
+python-dateutil
+google-api-python-client
