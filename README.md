@@ -20,6 +20,11 @@ Server caching for API calls
     * `FASTPASS_YOUTUBE_API_KEY` - YouTube issued API key. Default is `None`.
     * `FASTPASS_YOUTUBE_PLAYLIST_ID` - YouTube ID of playlist to pull entities from. Default is `None`.
     * `FASTPASS_YOUTUBE_EXPIRE_SECONDS`
+* YouTube Broadcasts
+    * `FASTPASS_BROADCAST_CLIENT_ID` - YouTube oAuth client ID. Default is `None` 
+    * `FASTPASS_BROADCAST_CLIENT_SECRET` - YouTube oAuth client secret. Default is `None` 
+    * `FASTPASS_BROADCAST_REFRESH_TOKEN` - YouTube oAuth refresh token. Default is `None` 
+    * `FASTPASS_BROADCAST_EXPIRE_SECONDS` - Time in seconds for broadcast cache expiration. Default is `600`.
 * Redis
     * `FASTPASS_REDIS_HOST` - Redis host location. Default is `127.0.0.1`.
     * `FASTPASS_REDIS_PORT` - Redis port. Default is `36379`.
