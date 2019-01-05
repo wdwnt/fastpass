@@ -290,8 +290,13 @@ def single_podcast(post_id):
 def posts():
     in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
     in_page = request.args.get('page', 1)
-    url = 'https://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
-    url = url.format(in_per_page, in_page)
+    in_slug = request.args.get('slug', '')
+    if in_slug:
+        url = 'https://wdwnt.com/wp-json/wp/v2/posts?slug={}'
+        url.format(in_slug)
+    else:
+        url = 'https://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
+        url = url.format(in_per_page, in_page)
     # print(url)
     response_dict = _get_from_cache(url)
     if not response_dict:
