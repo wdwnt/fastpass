@@ -14,7 +14,8 @@ class TestFunctions(unittest.TestCase):
     def test_output(self):
         with fastpass.app.test_request_context():
             # Mock object
-            for func in ('posts', 'youtube', 'podcasts', 'radio'):
+            for func in ('posts', 'youtube', 'podcasts', 'announcements',
+                         'radio'):
                 # t1 = datetime.now()
                 t1_start = datetime.now()
                 out = getattr(fastpass, func)()

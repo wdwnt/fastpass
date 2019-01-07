@@ -292,8 +292,8 @@ def posts():
     in_page = request.args.get('page', 1)
     in_slug = request.args.get('slug', '')
     if in_slug:
-        url = 'https://wdwnt.com/wp-json/wp/v2/posts?slug={}'
-        url.format(in_slug)
+        url = 'https://wdwnt.com/wp-json/wp/v2/posts?slug={}&_embed'
+        url = url.format(in_slug)
     else:
         url = 'https://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
         url = url.format(in_per_page, in_page)
