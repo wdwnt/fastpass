@@ -201,6 +201,16 @@ def _get_from_cache(url):
             del mem_cache[url]
             return None
 
+def _clear_cache(status):
+    if status == 'NOT_FULL_OF_SHIT':
+        if CACHE_SYSTEM == 'redis':
+            redis_db.flushall()
+        else:
+            to_delete = list(mem_cache.keys())
+            for k in to_delete:
+                del mem_cache[k]
+            return True
+    return False
 
 @app.route('/settings')
 def settings_call():
@@ -357,6 +367,15 @@ def radio():
             _store_in_cache(url, response_dict, expire_time=ending)
     return jsonify(response_dict)
 
+@app.route('/clear', methods=['POST'])
+def clear_cache():
+    data = request.json
+    if data is not None:
+        status = data.get('status')
+    else:
+        status = ''
+    resp = _clear_cache(status)
+    return ('', 204) if resp else (jsonify({'status': 'Invalid status'}), 401)
 
 if __name__ == '__main__':
     app.run(debug=True, port=SERVER_PORT)
