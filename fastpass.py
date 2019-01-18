@@ -121,7 +121,7 @@ def format_wp_single_post(in_data):
         try:
             term_val = term[0][0].get('name', '')
             obj['category'] = html.unescape(term_val)
-        except KeyError:
+        except (KeyError, IndexError):
             obj['category'] = ''
     else:
         obj['category'] = ''
@@ -334,7 +334,7 @@ def single_post(post_id):
 def announcements():
     # url = 'https://wdwnt.com/wp-json/wp/v2/announcements?appflag=7566,7568'
     # https://wdwnt.com/wp-json/wp/v2/appflag?include=7566,7568
-    url = 'https://wdwnt.com/wp-json/wp/v2/announcements'
+    url = 'https://wdwnt.com/wp-json/wp/v2/announcements?_embed'
     response_dict = _get_from_cache(url)
     if not response_dict:
         response = requests.get(url, headers=WP_HEADER)
