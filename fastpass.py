@@ -387,7 +387,7 @@ def unlisted_videos():
     in_delta_minutes = int(request.args.get('delta_minutes', UNLISTED_VIDEO_EXPIRE_SECONDS/60))
     if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
         return jsonify({})
-    response_list = _get_from_cache('broadcasts/unlisted')
+    response_list = _get_from_cache('unlisted_videos')
     if not response_list:
         yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
         response_list = yb.get_unlisted_videos(in_delta_minutes)
