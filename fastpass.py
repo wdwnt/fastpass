@@ -13,6 +13,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from youtube import YoutubeBroadcasts
+from slack import SlackMessenger
 
 
 def _setup_appflags():
@@ -39,6 +40,7 @@ BROADCAST_CLIENT_ID = os.getenv('FASTPASS_BROADCAST_CLIENT_ID', None)
 BROADCAST_CLIENT_SECRET = os.getenv('FASTPASS_BROADCAST_CLIENT_SECRET', None)
 BROADCAST_REFRESH_TOKEN = os.getenv('FASTPASS_BROADCAST_REFRESH_TOKEN', None)
 BROADCAST_EXPIRE_SECONDS = os.getenv('FASTPASS_BROADCAST_EXPIRE_SECONDS', 600)
+UNLISTED_VIDEO_EXPIRE_SECONDS = os.getenv('FASTPASS_UNLISTED_VIDEO_EXPIRE_SECONDS', 300)
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
@@ -201,6 +203,7 @@ def _get_from_cache(url):
             del mem_cache[url]
             return None
 
+
 def _clear_cache(status):
     if status == 'NOT_FULL_OF_SHIT':
         if CACHE_SYSTEM == 'redis':
@@ -211,6 +214,7 @@ def _clear_cache(status):
                 del mem_cache[k]
             return True
     return False
+
 
 @app.route('/settings')
 def settings_call():
@@ -346,7 +350,6 @@ def announcements():
     return jsonify(response_dict)
 
 
-
 @app.route('/radio')
 def radio():
     url = 'https://wdwnt.airtime.pro/api/live-info'
@@ -367,6 +370,7 @@ def radio():
             _store_in_cache(url, response_dict, expire_time=ending)
     return jsonify(response_dict)
 
+
 @app.route('/clear', methods=['POST'])
 def clear_cache():
     data = request.json
@@ -376,6 +380,26 @@ def clear_cache():
         status = ''
     resp = _clear_cache(status)
     return ('', 204) if resp else (jsonify({'status': 'Invalid status'}), 401)
+
+
+@app.route('/unlisted_videos')
+def unlisted_videos():
+    in_delta_minutes = int(request.args.get('delta_minutes', UNLISTED_VIDEO_EXPIRE_SECONDS/60))
+    if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
+        return jsonify({})
+    response_list = _get_from_cache('broadcasts/unlisted')
+    if not response_list:
+        yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
+        response_list = yb.get_unlisted_videos(in_delta_minutes)
+        _store_in_cache('unlisted_videos', response_list, expire_seconds=UNLISTED_VIDEO_EXPIRE_SECONDS)
+        sm = SlackMessenger()
+        for video in response_list:
+            slack_msg = 'A new video has been uploaded to the WDWNT YouTube Channel and may need a cover image.' \
+                        ' {} https://www.youtube.com/watch?v={}'
+            msg = slack_msg.format(video['title'], video['id'])
+            sm.send(msg, 'youtube', 'YouTube Unlisted FastPass ZapBot', ':youtube:')
+    return jsonify(response_list)
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=SERVER_PORT)
