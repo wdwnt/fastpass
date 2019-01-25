@@ -270,7 +270,7 @@ def wigs_broadcasts():
 
 
 @app.route('/broadcasts/debug', strict_slashes=False)
-def broadcasts():
+def debug_broadcasts():
     if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
         return jsonify({})
     yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
