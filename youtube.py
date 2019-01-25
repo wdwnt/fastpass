@@ -32,13 +32,15 @@ class YoutubeBroadcasts(object):
         return build(self.api_service_name, self.api_version, credentials=credentials)
 
     # Retrieve a list of broadcasts with the specified status.
-    def list_broadcasts(self, broadcast_status='all'):
+    def list_broadcasts(self, broadcast_status='all', debug=False):
         # print('Broadcasts with status "{}":'.format(broadcast_status))
+
+        max_results = 7 if debug else 50
 
         list_broadcasts_request = self.service.liveBroadcasts().list(
             broadcastStatus=broadcast_status,
             part='id,snippet,contentDetails,status',
-            maxResults=50
+            maxResults=max_results
         )
 
         result = []
@@ -48,6 +50,9 @@ class YoutubeBroadcasts(object):
             for broadcast in list_broadcasts_response.get('items', []):
                 # print('{} ({})'.format(broadcast['snippet']['title'], broadcast['id']))
                 result.append(broadcast)
+
+            if debug:
+                break
 
             list_broadcasts_request = self.service.liveBroadcasts().list_next(
                 list_broadcasts_request, list_broadcasts_response)
@@ -91,12 +96,12 @@ class YoutubeBroadcasts(object):
         return max(filter(lambda x: x['live_status'] == 'complete', all_broadcasts),
                    key=lambda x: parse(x['air_time']))
 
-    def get_broadcasts(self, show_unlisted=False):
+    def get_broadcasts(self, show_unlisted=False, debug=False):
         all_broadcasts = []
         # for status in self.valid_statuses:
         for status in ('all',):
             try:
-                all_broadcasts.extend(self.list_broadcasts(status))
+                all_broadcasts.extend(self.list_broadcasts(status, debug=debug))
             except HttpError as e:
                 print('An HTTP error {} occurred:\n{}'.format(e.resp.status, e.content))
         all_objs = []
@@ -105,10 +110,13 @@ class YoutubeBroadcasts(object):
             if not show_unlisted and x['status']['privacyStatus'] == 'unlisted':
                 continue
             obj = {'air_time': x['snippet']['scheduledStartTime'],
+                   'title': x['snippet']['title'],
                    'live_status': x['status']['lifeCycleStatus'],
                    'privacy': x['status']['privacyStatus'], 'id': x['id']}
             video_for_id[x['id']] = x
             all_objs.append(obj)
+        if debug:
+            return all_objs
         result = {
             'live': self._live_broadcasts(all_objs),
             'upcoming': self._next_day_upcoming(all_objs),
@@ -140,4 +148,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     yb = YoutubeBroadcasts(args.client_id, args.client_secret, args.refresh_token)
-    pprint(yb.get_broadcasts())
+    pprint(yb.get_broadcasts(show_unlisted=True, debug=True))

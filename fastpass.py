@@ -269,6 +269,15 @@ def wigs_broadcasts():
     return jsonify(response_dict)
 
 
+@app.route('/broadcasts/debug', strict_slashes=False)
+def broadcasts():
+    if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
+        return jsonify({})
+    yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
+    response_dict = yb.get_broadcasts(show_unlisted=True, debug=True)
+    return jsonify(response_dict)
+
+
 @app.route('/podcasts', strict_slashes=False)
 def podcasts():
     in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
