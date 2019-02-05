@@ -82,7 +82,7 @@ class YoutubeBroadcasts(object):
 
     @staticmethod
     def _live_broadcasts(all_broadcasts):
-        return [x for x in all_broadcasts if x['live_status'] in ('live', 'liveStarting')]
+        return [x for x in all_broadcasts if x['live_status'] in ('live', 'liveStarting', 'testStarting', 'testing')]
 
     @staticmethod
     def _next_day_upcoming(all_broadcasts):
