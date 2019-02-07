@@ -305,9 +305,19 @@ def posts():
     in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
     in_page = request.args.get('page', 1)
     in_slug = request.args.get('slug', '')
+    in_categories = request.args.get('categories', '')
+    in_search = request.args.get('search', '')
+    add_to_cache = True
     if in_slug:
         url = 'https://wdwnt.com/wp-json/wp/v2/posts?slug={}&_embed'
         url = url.format(in_slug)
+    elif in_categories:
+        url = 'https://wdwnt.com/wp-json/wp/v2/posts?categories={}&per_page={}&page={}&_embed'
+        url = url.format(in_categories, in_per_page, in_page)
+    elif in_search:
+        url = 'https://wdwnt.com/wp-json/wp/v2/posts?search={}&per_page={}&page={}&_embed'
+        url = url.format(in_search, in_per_page, in_page)
+        add_to_cache = False
     else:
         url = 'https://wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
         url = url.format(in_per_page, in_page)
@@ -316,7 +326,8 @@ def posts():
     if not response_dict:
         response = requests.get(url, headers=WP_HEADER)
         response_dict = format_wp(response.json())
-        _store_in_cache(url, response_dict)
+        if add_to_cache:
+            _store_in_cache(url, response_dict)
     return jsonify(response_dict)
 
 
