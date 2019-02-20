@@ -364,8 +364,9 @@ def announcements():
         response = requests.get(url, headers=WP_HEADER)
         response_dict = {}
         for id, slug in WP_APPFLAGS.items():
-            response_dict[slug] = format_wp_single_post(
-                next((x for x in response.json() if x['appflag'][0] == id), {}))
+            response_dict[slug] = [format_wp_single_post(x)
+                                   for x in response.json()
+                                   if x['appflag'][0] == id]
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
 
