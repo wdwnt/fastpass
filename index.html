@@ -1,0 +1,40 @@
+<html>
+<head>
+<style>
+table {
+  border-collapse: collapse;
+}
+table, th, td{
+  border: 1px solid black;
+}
+td{
+  vertical-align: top;
+  max-width: 48vw;
+  overflow: auto;
+}
+pre{
+  max-height: 400px;
+  overflow-y: auto;
+}
+</style>
+</head>
+<body onload="loadCache()">
+<div id="settings"></div>
+<div id="cacheDump"></div>
+<script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+<script>
+  function loadCache(){
+    $.getJSON("/settings", function(settings){
+      $("#settings").html("FastPass deployed at "+settings.deployed_at+", version "+settings.version);
+      var cacheDump = "<table><thead><th>Key</th><th>Value</th></thead><tbody>"
+      for(var key in settings.mem_cache) if(settings.mem_cache.hasOwnProperty(key)){
+        var value = settings.mem_cache[key];
+        cacheDump += "<tr><td>"+key+"</td><td><pre>"+JSON.stringify(value, null, 2)+"</pre></td></tr>";
+      }
+      cacheDump += "</tbody></table>";
+      $("#cacheDump").html(cacheDump);
+    });
+  }
+</script>
+</body>
+</html>

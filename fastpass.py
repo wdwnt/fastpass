@@ -432,6 +432,10 @@ def unlisted_videos():
             sm.send(msg, 'youtube', 'YouTube Unlisted FastPass ZapBot', ':youtube:')
     return jsonify(response_list)
 
+@app.route('/')
+def root():
+    return app.send_static_file('index.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=SERVER_PORT)
