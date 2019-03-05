@@ -45,6 +45,7 @@ REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
 REDIS_USE_SSL = os.getenv('FASTPASS_REDIS_USE_SSL', False)
+GIT_COMMIT = os.getenv('FASTPASS_GIT_COMMIT', None)
 WP_HEADER = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
                            'AppleWebKit/537.36 (KHTML, like Gecko) '
                            'Chrome/50.0.2661.102 Safari/537.36'}
@@ -218,7 +219,10 @@ def _clear_cache(status):
 
 @app.route('/settings')
 def settings_call():
-    ver = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
+    if GIT_COMMIT:
+        ver = GIT_COMMIT
+    else:
+        ver = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
     # TODO - Expand with more settings like environment variables.
     return jsonify({'version': ver.decode().rstrip()})
 
