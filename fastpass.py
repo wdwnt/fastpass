@@ -225,9 +225,10 @@ def settings_call():
         ver = GIT_COMMIT
     else:
         ver = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
+        ver = ver.decode().rstrip()
     # TODO - Expand with more settings like environment variables.
     return jsonify({
-        'version': ver.decode().rstrip(),
+        'version': ver,
         'description': GIT_DESCRIPTION,
         'deployed_at': GIT_RELEASE_AT,
     })
