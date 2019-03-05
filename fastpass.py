@@ -211,10 +211,9 @@ def _clear_cache(status):
     if status == 'NOT_FULL_OF_SHIT':
         if CACHE_SYSTEM == 'redis':
             redis_db.flushall()
+            return True
         else:
-            to_delete = list(mem_cache.keys())
-            for k in to_delete:
-                del mem_cache[k]
+            mem_cache.clear()
             return True
     return False
 
