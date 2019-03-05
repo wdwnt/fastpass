@@ -45,7 +45,9 @@ REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
 REDIS_USE_SSL = os.getenv('FASTPASS_REDIS_USE_SSL', False)
-GIT_COMMIT = os.getenv('FASTPASS_GIT_COMMIT', None)
+GIT_COMMIT = os.getenv('HEROKU_SLUG_COMMIT', None)
+GIT_RELEASE_AT = os.getenv('HEROKU_RELEASE_CREATED_AT', None)
+GIT_DESCRIPTION = os.getenv('HEROKU_SLUG_DESCRIPTION', None)
 WP_HEADER = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
                            'AppleWebKit/537.36 (KHTML, like Gecko) '
                            'Chrome/50.0.2661.102 Safari/537.36'}
@@ -224,7 +226,11 @@ def settings_call():
     else:
         ver = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
     # TODO - Expand with more settings like environment variables.
-    return jsonify({'version': ver.decode().rstrip()})
+    return jsonify({
+        'version': ver.decode().rstrip(),
+        'description': GIT_DESCRIPTION,
+        'deployed_at': GIT_RELEASE_AT,
+    })
 
 
 @app.route('/youtube')
