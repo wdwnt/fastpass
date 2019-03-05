@@ -231,6 +231,7 @@ def settings_call():
         'version': ver,
         'description': GIT_DESCRIPTION,
         'deployed_at': GIT_RELEASE_AT,
+        'mem_cache': mem_cache
     })
 
 
