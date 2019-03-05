@@ -53,7 +53,7 @@ WP_HEADER = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) '
                            'Chrome/50.0.2661.102 Safari/537.36'}
 WP_APPFLAGS = _setup_appflags()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static/')
 CORS(app)
 
 mem_cache = {}
@@ -432,8 +432,9 @@ def unlisted_videos():
             sm.send(msg, 'youtube', 'YouTube Unlisted FastPass ZapBot', ':youtube:')
     return jsonify(response_list)
 
+
 @app.route('/')
-def root():
+def root_page():
     return app.send_static_file('index.html')
 
 
