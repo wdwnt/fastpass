@@ -192,7 +192,7 @@ def _store_in_cache(url, data, expire_time=None,
         mem_cache[url] = val
 
 
-def _get_from_cache(url):
+def _get_from_cache(url, include_old=False):
     now = datetime.utcnow()
     now = now.replace(tzinfo=timezone.utc)
     if CACHE_SYSTEM == 'redis':
@@ -200,7 +200,7 @@ def _get_from_cache(url):
     else:
         if url not in mem_cache:
             return None
-        if mem_cache[url]['expire_at'] >= now.timestamp():
+        if mem_cache[url]['expire_at'] >= now.timestamp() or include_old:
             return mem_cache[url]['data']
         else:
             del mem_cache[url]
@@ -264,6 +264,11 @@ def broadcasts():
     if not response_dict:
         yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
         response_dict = yb.get_broadcasts()
+        old_response = _get_from_cache('broadcasts', include_old=True)
+        old_response = {} if old_response is None else old_response
+        all_upcoming = response_dict['upcoming'] + old_response.get('upcoming', [])
+        response_dict['upcoming'] = list({v['id']: v for v in all_upcoming if v['id'] not in
+                                          [x['id'] for x in response_dict['live']]}.values())
         _store_in_cache('broadcasts', response_dict, expire_seconds=BROADCAST_EXPIRE_SECONDS)
     return jsonify(response_dict)
 
@@ -276,6 +281,11 @@ def wigs_broadcasts():
     if not response_dict:
         yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
         response_dict = yb.get_broadcasts(show_unlisted=True)
+        old_response = _get_from_cache('broadcasts', include_old=True)
+        old_response = {} if old_response is None else old_response
+        all_upcoming = response_dict['upcoming'] + old_response.get('upcoming', [])
+        response_dict['upcoming'] = list({v['id']: v for v in all_upcoming if v['id'] not in
+                                          [x['id'] for x in response_dict['live']]}.values())
         _store_in_cache('broadcasts/unlisted', response_dict, expire_seconds=BROADCAST_EXPIRE_SECONDS)
     return jsonify(response_dict)
 
@@ -374,10 +384,10 @@ def announcements():
     if not response_dict:
         response = requests.get(url, headers=WP_HEADER)
         response_dict = {}
-        for id, slug in WP_APPFLAGS.items():
+        for a_id, slug in WP_APPFLAGS.items():
             response_dict[slug] = [format_wp_single_post(x)
                                    for x in response.json()
-                                   if x['appflag'][0] == id]
+                                   if x['appflag'][0] == a_id]
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
 
