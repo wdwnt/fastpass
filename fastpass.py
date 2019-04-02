@@ -396,7 +396,6 @@ def announcements():
 @app.route('/radio')
 def radio():
     url = 'https://wdwnt.airtime.pro/api/live-info'
-    #date_form = '%Y-%m-%d %H:%M:%S.%f'
     response_dict = _get_from_cache(url)
     if not response_dict:
         response = requests.get(url)
@@ -409,11 +408,9 @@ def radio():
         if response_dict['current']['type'] == 'livestream':
             expiry = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
             expiry = expiry.replace(tzinfo=timezone.utc)
-            #response_dict['current']['ends'] = datetime.strftime(expiry, date_form)
             response_dict['current']['ends'] = parser.parse(expiry)
             _store_in_cache(url, response_dict)
         else:
-            #ending = datetime.strptime(response_dict['current']['ends'], date_form)
             ending = parser.parse(response_dict['current']['ends'])
             ending = ending.replace(tzinfo=timezone.utc)
             # pprint(ending)
