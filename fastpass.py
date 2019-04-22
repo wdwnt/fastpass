@@ -24,7 +24,7 @@ def _setup_appflags():
         response_data = response.json()
         result = dict([(x['id'], x['slug']) for x in response_data])
         return result
-    except BaseException:
+    except Exception:
         return {}
 
 
@@ -158,6 +158,22 @@ def format_wp_single_post(in_data):
         jrp_list.append(jrp_data)
     obj['jetpack-related-posts'] = jrp_list
     return obj
+
+
+def format_notifications(in_data):
+    result = []
+    for n in in_data:
+        note_obj = {}
+        for x in ('id', 'type', 'date'):
+            f = 'date_gmt' if x == 'date' else x
+            note_obj[x] = n.get(f)
+        for x in ('title', 'text'):
+            f = 'excerpt' if x == 'text' else x
+            note_obj[x] = html.unescape(n.get(f, {}).get('rendered', '')),
+        for x in ('app_notification_category', 'app_notification_type'):
+            note_obj[x] = n.get(x, [])
+        result.append(note_obj)
+    return result
 
 
 def format_youtube(in_data):
@@ -376,7 +392,7 @@ def single_post(post_id):
     return jsonify(response_dict)
 
 
-@app.route('/announcements')
+@app.route('/announcements', strict_slashes=False)
 def announcements():
     # url = 'https://wdwnt.com/wp-json/wp/v2/announcements?appflag=7566,7568'
     # https://wdwnt.com/wp-json/wp/v2/appflag?include=7566,7568
@@ -389,6 +405,20 @@ def announcements():
             response_dict[slug] = [format_wp_single_post(x)
                                    for x in response.json()
                                    if x['appflag'][0] == a_id]
+        _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
+
+
+@app.route('/notifications', strict_slashes=False)
+def notifications():
+    in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
+    in_page = request.args.get('page', 1)
+    url = 'https://wdwnt.com/wp-json/wp/v2/app_notification?per_page={}&page={}'
+    url = url.format(in_per_page, in_page)
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        response = requests.get(url, headers=WP_HEADER)
+        response_dict = format_notifications(response.json())
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
 
