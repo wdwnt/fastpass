@@ -12,6 +12,7 @@ import redis
 from ftfy import fix_text
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from bs4 import BeautifulSoup
 
 from youtube import YoutubeBroadcasts
 from slack import SlackMessenger
@@ -85,7 +86,7 @@ def format_airtime(in_data):
     return result
 
 
-def format_wp(in_data, with_content=False):
+def format_wp(in_data, with_content=False, with_player=True):
     result = []
     for post in in_data:
         raw_url = urlparse(post.get('guid', {}).get('rendered', ''))
@@ -114,12 +115,29 @@ def format_wp(in_data, with_content=False):
             obj['category'] = ''
 
         if with_content:
-            obj['content'] = post.get('content', {}).get('rendered', '')
+            raw_content = post.get('content', {}).get('rendered', '')
+            if with_player:
+                obj['content'] = raw_content
+            else:
+                content, media_url = remove_player(raw_content)
+                obj['content'] = content
+                obj['media_url'] = media_url
         result.append(obj)
     return result
 
 
-def format_wp_single_post(in_data):
+def remove_player(wp_content):
+    soup = BeautifulSoup(wp_content, "html.parser")
+
+    download_url = soup.find('a', class_='powerpress_link_d').get('href', '')
+    for tag in soup.select('div.powerpress_player'):
+        tag.decompose()
+    for tag in soup.select('p.powerpress_links'):
+        tag.decompose()
+    return str(soup), download_url
+
+
+def format_wp_single_post(in_data, with_player=True):
     obj = dict(author=[])
     obj['id'] = in_data.get('id')
     obj['title'] = html.unescape(in_data.get('title', {}).get('rendered', ''))
@@ -133,7 +151,15 @@ def format_wp_single_post(in_data):
     else:
         obj['category'] = ''
     obj['date'] = in_data.get('date_gmt')
-    obj['text'] = in_data.get('content', {}).get('rendered', '')
+
+    raw_text = in_data.get('content', {}).get('rendered', '')
+    if with_player:
+        obj['text'] = raw_text
+    else:
+        content, media_url = remove_player(raw_text)
+        obj['text'] = content
+        obj['media_url'] = media_url
+
     media = in_data.get('_embedded', {}).get('wp:featuredmedia', [])
     if media:
         obj['featured_image'] = media[0].get('source_url')
@@ -322,14 +348,17 @@ def podcasts():
     in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
     in_page = request.args.get('page', 1)
     with_content = 'nocontent' not in request.args
+    with_player = 'noplayer' not in request.args
     url = 'https://podcasts.wdwnt.com/wp-json/wp/v2/posts?per_page={}&page={}&_embed'
     url = url.format(in_per_page, in_page)
-    cache_url = '{}|{}'.format('WithContent' if with_content else 'NoContent', url)
+    cache_url = '{}|{}|{}'.format('WithContent' if with_content else 'NoContent',
+                                  'WithPlayer' if with_player else 'NoPlayer', url)
+    # TODO - use cache data with content/player to populate NoContent/NoPlayer
     # print(url)
     response_dict = _get_from_cache(cache_url)
     if not response_dict:
         response = requests.get(url, headers=WP_HEADER)
-        response_dict = format_wp(response.json(), with_content=with_content)
+        response_dict = format_wp(response.json(), with_content=with_content, with_player=with_player)
         _store_in_cache(cache_url, response_dict)
     return jsonify(response_dict)
 
@@ -340,11 +369,13 @@ def single_podcast(post_id):
     url = 'https://podcasts.wdwnt.com/wp-json/wp/v2/posts/{}?_embed'
     url = url.format(post_id)
     # print(url)
-    response_dict = _get_from_cache(url)
+    with_player = 'noplayer' not in request.args
+    cache_url = '{}|{}'.format('WithPlayer' if with_player else 'NoPlayer', url)
+    response_dict = _get_from_cache(cache_url)
     if not response_dict:
         response = requests.get(url, headers=WP_HEADER)
-        response_dict = format_wp_single_post(response.json())
-        _store_in_cache(url, response_dict)
+        response_dict = format_wp_single_post(response.json(), with_player=with_player)
+        _store_in_cache(cache_url, response_dict)
     return jsonify(response_dict)
 
 
