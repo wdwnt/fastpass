@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 import requests
 import redis
-import ftfy
+from ftfy import fix_text
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -72,13 +72,14 @@ def format_airtime(in_data):
         md_block = {}
         for field in ('track_title', 'artist_name', 'length'):
             raw_text = in_data.get(song, {}).get('metadata', {}).get(field)
-            md_block[field] = ftfy.fix_text(raw_text) if raw_text else raw_text
+            md_block[field] = fix_text(raw_text) if raw_text else raw_text
         result[song]['metadata'] = md_block
     if len(in_data.get('currentShow', [])):
         show_data = in_data['currentShow'][0]
         show_block = {}
         for field in ('name', 'image_path'):
-            show_block[field] = show_data.get(field)
+            raw_text = show_data.get(field)
+            show_block[field] = fix_text(raw_text) if raw_text else raw_text
         result['currentShow'].append(show_block)
 
     return result
