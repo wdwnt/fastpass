@@ -137,7 +137,7 @@ def remove_player(wp_content):
     return str(soup), download_url
 
 
-def format_wp_single_post(in_data, with_player=True):
+def format_wp_single_post(in_data, with_player=True, with_icon=False):
     obj = dict(author=[])
     obj['id'] = in_data.get('id')
     obj['title'] = html.unescape(in_data.get('title', {}).get('rendered', ''))
@@ -175,6 +175,10 @@ def format_wp_single_post(in_data, with_player=True):
         author_data['avatar_urls']['96'] = x.get('avatar_urls', {}).get('96')
         author_list.append(author_data)
     obj['author'] = author_list
+
+    if with_icon:
+        app_menu_icon = in_data.get('acf', {}).get('app_menu_icon', '')
+        obj['acf'] = {'app_menu_icon': app_menu_icon}
 
     jrps = in_data.get('jetpack-related-posts', [])
     jrp_list = []
@@ -434,7 +438,7 @@ def announcements():
         response = requests.get(url, headers=WP_HEADER)
         response_dict = {}
         for a_id, slug in WP_APPFLAGS.items():
-            response_dict[slug] = [format_wp_single_post(x)
+            response_dict[slug] = [format_wp_single_post(x, with_icon=True)
                                    for x in response.json()
                                    if x['appflag'][0] == a_id]
         _store_in_cache(url, response_dict)
