@@ -428,6 +428,40 @@ def single_post(post_id):
     return jsonify(response_dict)
 
 
+@app.route('/pages', strict_slashes=False)
+def pages():
+    in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
+    in_page = request.args.get('page', 1)
+    in_slug = request.args.get('slug', '')
+    if in_slug:
+        url = 'https://wdwnt.com/wp-json/wp/v2/pages?slug={}&_embed'
+        url = url.format(in_slug)
+    else:
+        url = 'https://wdwnt.com/wp-json/wp/v2/pages?per_page={}&page={}&_embed'
+        url = url.format(in_per_page, in_page)
+    # print(url)
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        response = requests.get(url, headers=WP_HEADER)
+        response_dict = format_wp(response.json())
+        _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
+
+
+@app.route('/pages/<int:post_id>')
+def single_page(post_id):
+    # Do something with page_id
+    url = 'https://wdwnt.com/wp-json/wp/v2/pages/{}?_embed'
+    url = url.format(post_id)
+    # print(url)
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        response = requests.get(url, headers=WP_HEADER)
+        response_dict = format_wp_single_post(response.json())
+        _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
+
+
 @app.route('/announcements', strict_slashes=False)
 def announcements():
     # url = 'https://wdwnt.com/wp-json/wp/v2/announcements?appflag=7566,7568'
