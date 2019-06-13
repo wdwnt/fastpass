@@ -89,7 +89,7 @@ class YoutubeBroadcasts(object):
         today = datetime.now(timezone.utc)
         tomorrow = today + timedelta(days=1)
         return [x for x in all_broadcasts if x['live_status'] in ('created', 'ready')
-                and parse(x['air_time']) > today and parse(x['air_time']) < tomorrow]
+                and parse(x['air_time']) < tomorrow]
 
     @staticmethod
     def _last_completed(all_broadcasts):
