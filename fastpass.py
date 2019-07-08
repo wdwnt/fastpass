@@ -509,6 +509,7 @@ def radio():
             expiry = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
             expiry = expiry.replace(tzinfo=timezone.utc)
             response_dict['current']['ends'] = expiry
+            response_dict['current']['metadata']['length'] = str(timedelta(seconds=CACHE_EXPIRE_SECONDS))
             _store_in_cache(url, response_dict)
         else:
             ending = parser.parse(response_dict['current']['ends'])
