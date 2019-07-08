@@ -508,7 +508,7 @@ def radio():
         if response_dict['current']['type'] == 'livestream':
             expiry = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
             expiry = expiry.replace(tzinfo=timezone.utc)
-            response_dict['current']['ends'] = parser.parse(expiry)
+            response_dict['current']['ends'] = expiry
             _store_in_cache(url, response_dict)
         else:
             ending = parser.parse(response_dict['current']['ends'])
