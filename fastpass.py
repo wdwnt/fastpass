@@ -86,6 +86,23 @@ def format_airtime(in_data):
     return result
 
 
+def format_live365(in_data):
+    result = {'current-track': {}, 'last-played': []}
+    track_fields = ('start', 'end', 'artist', 'title', 'art', 'duration', 'sync_offset')
+    for field in track_fields:
+        result['current-track'][field] = in_data.get('current-track', {}).get(field)
+    for song in in_data.get('last-played', []):
+        song_data = {}
+        for field in track_fields:
+            song_data[field] = song.get(field)
+        result['last-played'].append(song_data)
+    result['stream-urls'] = in_data.get('stream-urls', [])
+    result['live_dj_on'] = in_data.get('live_dj_on', False)
+    result['listeners'] = in_data.get('listeners', 0)
+
+    return result
+
+
 def format_wp(in_data, with_content=False, with_player=True):
     result = []
     for post in in_data:
@@ -513,6 +530,32 @@ def radio():
             _store_in_cache(url, response_dict)
         else:
             ending = parser.parse(response_dict['current']['ends'])
+            ending = ending.replace(tzinfo=timezone.utc)
+            # pprint(ending)
+            _store_in_cache(url, response_dict, expire_time=ending)
+    return jsonify(response_dict)
+
+
+@app.route('/live365')
+def live365():
+    url = 'https://api.live365.com/station/a31769'
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        response = requests.get(url)
+        try:
+            response.raise_for_status()
+            response_dict = format_live365(response.json())
+        except requests.exceptions.HTTPError:
+            _store_in_cache(url, {}, expire_seconds=CACHE_EXPIRE_SECONDS)
+            return jsonify({})
+        if response_dict['live_dj_on']:
+            expiry = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
+            expiry = expiry.replace(tzinfo=timezone.utc)
+            response_dict['current-track']['end'] = expiry
+            response_dict['current-track']['duration'] = str(timedelta(seconds=CACHE_EXPIRE_SECONDS))
+            _store_in_cache(url, response_dict)
+        else:
+            ending = parser.parse(response_dict['current-track']['end'])
             ending = ending.replace(tzinfo=timezone.utc)
             # pprint(ending)
             _store_in_cache(url, response_dict, expire_time=ending)
