@@ -1,11 +1,15 @@
 import json
 import requests
+import os
 
 class SlackMessenger(object):
     def __init__(self, webhook_url=''):
-        if not webhook_url:
-            self.webhook_url = 'https://hooks.slack.com/services/' \
-                               'T0MQRT945/B6EJ999CP/ywQKzU2FHm1q1iUh5DKSVOls'
+        if webhook_url:
+            self.webhook_url = webhook_url
+        else:
+            self.webhook_url = os.getenv('SLACK_WEBHOOK_URL', '')
+        if not self.webhook_url:
+            raise NotImplementedError('Slack Webhook URL not provided.')
 
     def send(self, msg, channel='', username='Bob Chapek Slack Bot',
              icon_emoji=':haha:'):
