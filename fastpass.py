@@ -555,8 +555,11 @@ def live365():
             response_dict['current-track']['duration'] = str(timedelta(seconds=CACHE_EXPIRE_SECONDS))
             _store_in_cache(url, response_dict)
         else:
-            ending = parser.parse(response_dict['current-track']['end'])
-            # pprint(ending)
+            if response_dict['current-track'].get('end') is None:
+                ending = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
+                ending = ending.replace(tzinfo=timezone.utc)
+            else:
+                ending = parser.parse(response_dict['current-track']['end'])
             _store_in_cache(url, response_dict, expire_time=ending)
     return jsonify(response_dict)
 
