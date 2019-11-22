@@ -1,0 +1,18 @@
+In the 503, a cookie is returned:
+
+{'__cfduid': 'd104abaf7a3edc7246647cef79f2a3c961574435135'}
+
+Then there's also the challenge form in the response (shown in the HTML file)
+
+That triggers JavaScript that's embedded in the file for a value for jschl_answer
+
+https://wdwnt.com/cdn-cgi/l/chk_jschl?s=830ee1ef43092954d83ec505cbc0914f24467ead-1574435278-0-AUxYVmhBSE6wTYPJ8t6EDtVTDwVPtN9HkkE2yTmekU7oM96BWIbxKe%2BlJ8htauy%2B5nnBwQfd%2BlWfu0VcQFxTw2YeUe3un6AXcMTae2dPFuhaEzyxNmCIPO%2Bd98idKAXtzQQUCFMNAHG%2Bw5i7yffJW2ZZZj1x7DNKowDrabCOjswAMlisXudPMz8geH84zFQUgUbWvSsLT5cDBg4jNVXan6k%3D&jschl_vc=070cd8a34312188f74554aeb812fa288&pass=1574435282.534-v1ilCXP14D&jschl_answer=10.0826327583
+
+The response from that returns a 302, which sets a cookie good for an hour.
+
+cf_clearance=f6fce15bd5370550bb20eabb595f1f932551e96f-1574435282-0-150; path=/; expires=Sat, 23-Nov-19 16:08:02 GMT; domain=.wdwnt.com; HttpOnly
+
+The 302 redirected location is back to the original API endpoint with the following request header:
+
+cookie: __cfduid=d6abb74f3a7fb3c27197f0d6eaea46d371574435278; cf_clearance=f6fce15bd5370550bb20eabb595f1f932551e96f-1574435282-0-150
+
