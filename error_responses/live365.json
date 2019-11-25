@@ -1,0 +1,34 @@
+{
+    "current-track": {
+        "art": "https://broadcaster.live365.com/art/5a4e70ef-d805-4226-9778-c3de3e1231ba.jpg",
+        "artist": "Please try again later.",
+        "duration": {{ page.duration }},
+        "end": "{{ page.end }}",
+        "start": "{{ page.start }}",
+        "sync_offset": "0:00:05.195648",
+        "title": "WDWNTunes is currently down for maintenance."
+    },
+    "last-played": [
+        {
+            "art": "https://broadcaster.live365.com/art/5a4e70ef-d805-4226-9778-c3de3e1231ba.jpg",
+            "artist": "WDWNTunes",
+            "duration": "0:02:57",
+            "end": "{{page.end}}",
+            "start": "{{page.start}}",
+            "sync_offset": "0:00:05.539163",
+            "title": "Currently down for maintenance"
+        }
+    ],
+    "listeners": 7,
+    "live_dj_on": false,
+    "stream-urls": [
+        {
+            "encoding": "mp3",
+            "high_quality": "https://streaming.live365.com/a31769"
+        },
+        {
+            "encoding": "mp3",
+            "low_quality": "https://streaming.live365.com/a31769"
+        }
+    ]
+}

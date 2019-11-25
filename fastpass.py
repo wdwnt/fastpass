@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from dateutil import parser
 import html
+import json
 import subprocess
 from urllib.parse import urlparse
 
@@ -11,6 +12,7 @@ import requests
 import redis
 from ftfy import fix_text
 from flask import Flask, jsonify, request
+from jinja2 import Environment, PackageLoader
 from flask_cors import CORS
 from bs4 import BeautifulSoup
 
@@ -57,6 +59,8 @@ WP_APPFLAGS = _setup_appflags()
 
 app = Flask(__name__, static_folder='static/')
 CORS(app)
+err_env = Environment(loader=PackageLoader('fastpass', 'error_responses'))
+err_env.filters['jsonify'] = json.dumps
 
 mem_cache = {}
 redis_db = redis.StrictRedis(host=REDIS_HOST,
@@ -271,6 +275,24 @@ def _get_from_cache(url, include_old=False):
             del mem_cache[url]
             return None
 
+
+def _get_error_json(path, cache_time=CACHE_EXPIRE_SECONDS):
+    file_path = f'{path[1:]}.json'
+    end_dt = datetime.utcnow() + timedelta(seconds=cache_time)
+    end_dt = end_dt.replace(tzinfo=timezone.utc)
+    start_dt = datetime.utcnow()
+    start_dt = start_dt.replace(tzinfo=timezone.utc)
+    page = {
+        'start': start_dt,
+        'end': end_dt,
+        'duration': cache_time
+    }
+    try:
+        template = err_env.get_template(file_path)
+        data = json.loads(template.render(page=page))
+    except Exception as e:
+        data = {}
+    return data
 
 def _clear_cache(status):
     if status == 'NOT_FULL_OF_SHIT':
@@ -546,8 +568,9 @@ def live365():
             response.raise_for_status()
             response_dict = format_live365(response.json())
         except requests.exceptions.HTTPError:
-            _store_in_cache(url, {}, expire_seconds=CACHE_EXPIRE_SECONDS)
-            return jsonify({})
+            err_resp = _get_error_json(request.path)
+            _store_in_cache(url, err_resp, expire_seconds=CACHE_EXPIRE_SECONDS)
+            return jsonify(err_resp)
         if response_dict['live_dj_on']:
             expiry = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
             expiry = expiry.replace(tzinfo=timezone.utc)
