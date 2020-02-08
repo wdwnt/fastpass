@@ -305,6 +305,23 @@ def _clear_cache(status):
     return False
 
 
+def _clear_posts(status):
+    prefix = 'https://wdwnt.com/wp-json/wp/v2/posts'
+    if status == 'NOT_FULL_OF_SHIT':
+        if CACHE_SYSTEM == 'redis':
+            for key in redis_db.scan_iter(prefix + '*'):
+                redis_db.delete(key)
+            return True
+        else:
+            to_del = set()
+            for k in mem_cache.keys():
+                if k.startswith(prefix):
+                    to_del.add(k)
+            for l in to_del:
+                mem_cache.pop(l)
+            return True
+    return False
+
 @app.route('/settings')
 def settings_call():
     if GIT_COMMIT:
@@ -595,6 +612,17 @@ def clear_cache():
     else:
         status = ''
     resp = _clear_cache(status)
+    return ('', 204) if resp else (jsonify({'status': 'Invalid status'}), 401)
+
+
+@app.route('/refresh_posts', methods=['POST'])
+def clear_posts():
+    data = request.json
+    if data is not None:
+        status = data.get('status')
+    else:
+        status = ''
+    resp = _clear_posts(status)
     return ('', 204) if resp else (jsonify({'status': 'Invalid status'}), 401)
 
 
