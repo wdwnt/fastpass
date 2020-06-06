@@ -117,10 +117,22 @@ class YoutubeBroadcasts(object):
             all_objs.append(obj)
         if debug:
             return all_objs
+        live = self._live_broadcasts(all_objs)
+        upcoming = self._next_day_upcoming(all_objs)
+        completed = self._last_completed(all_objs)
+
+        # In order to comply with Youtube Required Minimum Functionality
+        if live:
+            completed = live[0].copy()
+            live = []
+        elif upcoming:
+            completed = upcoming[0].copy()
+            upcoming = []
+
         result = {
-            'live': self._live_broadcasts(all_objs),
-            'upcoming': self._next_day_upcoming(all_objs),
-            'completed': self._last_completed(all_objs)
+            'live': live,
+            'upcoming': upcoming,
+            'completed': completed
         }
         return result
 
