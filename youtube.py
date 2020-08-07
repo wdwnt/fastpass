@@ -123,11 +123,17 @@ class YoutubeBroadcasts(object):
 
         # In order to comply with Youtube Required Minimum Functionality
         if live:
-            completed = live[0].copy()
-            live = []
-        elif upcoming:
-            completed = upcoming[0].copy()
+            live = [live[0].copy()]
             upcoming = []
+            completed = []
+        elif upcoming:
+            live = []
+            upcoming = [upcoming[0].copy()]
+            completed = []
+        elif completed:
+            live = []
+            upcoming = []
+            completed = [completed[0].copy()]
 
         result = {
             'live': live,
