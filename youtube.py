@@ -133,7 +133,7 @@ class YoutubeBroadcasts(object):
         elif completed:
             live = []
             upcoming = []
-            completed = [completed[0].copy()]
+            completed = [completed]
 
         result = {
             'live': live,
