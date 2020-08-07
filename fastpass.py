@@ -403,16 +403,6 @@ def debug_broadcasts():
     return jsonify(response_dict)
 
 
-@app.route('/broadcasts/live', strict_slashes=False)
-def debug_broadcasts():
-    if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
-        return jsonify({})
-    yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
-    response_dict = yb.get_broadcasts(debug=True)
-    live_only = [v for v in response_dict if v['live_status'] == 'live']
-    return jsonify(response_dict)
-
-
 @app.route('/podcasts', strict_slashes=False)
 def podcasts():
     in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
