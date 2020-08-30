@@ -647,7 +647,7 @@ def unlisted_videos():
             slack_msg = 'A new video has been uploaded to the WDWNT YouTube Channel and may need a cover image.' \
                         ' {} https://www.youtube.com/watch?v={}'
             msg = slack_msg.format(video['title'], video['id'])
-            sm.send(msg, 'youtube', 'YouTube Unlisted FastPass ZapBot', ':youtube:')
+            sm.send(msg, 'youtube-wdwnt', 'YouTube Unlisted FastPass ZapBot', ':youtube:')
     return jsonify(response_list)
 
 
