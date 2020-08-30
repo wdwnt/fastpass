@@ -45,6 +45,7 @@ BROADCAST_CLIENT_SECRET = os.getenv('FASTPASS_BROADCAST_CLIENT_SECRET', None)
 BROADCAST_REFRESH_TOKEN = os.getenv('FASTPASS_BROADCAST_REFRESH_TOKEN', None)
 BROADCAST_EXPIRE_SECONDS = os.getenv('FASTPASS_BROADCAST_EXPIRE_SECONDS', 600)
 UNLISTED_VIDEO_EXPIRE_SECONDS = os.getenv('FASTPASS_UNLISTED_VIDEO_EXPIRE_SECONDS', 300)
+LIVE365_EXPIRE_SECONDS = os.getenv('FASTPASS_LIVE365_EXPIRE_SECONDS', 30)
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
@@ -294,6 +295,7 @@ def _get_error_json(path, cache_time=CACHE_EXPIRE_SECONDS):
         data = {}
     return data
 
+
 def _clear_cache(status):
     if status == 'NOT_FULL_OF_SHIT':
         if CACHE_SYSTEM == 'redis':
@@ -321,6 +323,7 @@ def _clear_posts(status):
                 mem_cache.pop(l)
             return True
     return False
+
 
 @app.route('/settings')
 def settings_call():
@@ -586,20 +589,23 @@ def live365():
             response_dict = format_live365(response.json())
         except requests.exceptions.HTTPError:
             err_resp = _get_error_json(request.path)
-            _store_in_cache(url, err_resp, expire_seconds=CACHE_EXPIRE_SECONDS)
+            _store_in_cache(url, err_resp, expire_seconds=LIVE365_EXPIRE_SECONDS)
             return jsonify(err_resp)
+        calc_end_time = datetime.utcnow() + timedelta(seconds=LIVE365_EXPIRE_SECONDS)
+        calc_end_time = calc_end_time.replace(tzinfo=timezone.utc)
         if response_dict['live_dj_on']:
-            expiry = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
-            expiry = expiry.replace(tzinfo=timezone.utc)
-            response_dict['current-track']['end'] = expiry
-            response_dict['current-track']['duration'] = str(timedelta(seconds=CACHE_EXPIRE_SECONDS))
+            response_dict['current-track']['end'] = calc_end_time
+            response_dict['current-track']['duration'] = str(timedelta(seconds=LIVE365_EXPIRE_SECONDS))
             _store_in_cache(url, response_dict)
         else:
             if response_dict['current-track'].get('end') is None:
-                ending = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
-                ending = ending.replace(tzinfo=timezone.utc)
+                ending = calc_end_time
             else:
-                ending = parser.parse(response_dict['current-track']['end'])
+                track_end = parser.parse(response_dict['current-track']['end'])
+                if track_end < calc_end_time:
+                    ending = track_end
+                else:
+                    ending = calc_end_time
             _store_in_cache(url, response_dict, expire_time=ending)
     return jsonify(response_dict)
 
@@ -628,7 +634,7 @@ def clear_posts():
 
 @app.route('/unlisted_videos')
 def unlisted_videos():
-    in_delta_minutes = int(request.args.get('delta_minutes', UNLISTED_VIDEO_EXPIRE_SECONDS/60))
+    in_delta_minutes = int(request.args.get('delta_minutes', UNLISTED_VIDEO_EXPIRE_SECONDS / 60))
     if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
         return jsonify({})
     response_list = _get_from_cache('unlisted_videos')
