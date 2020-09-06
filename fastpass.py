@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 import requests
 import redis
 from ftfy import fix_text
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, redirect, url_for
 from jinja2 import Environment, PackageLoader
 from flask_cors import CORS
 from bs4 import BeautifulSoup
@@ -40,9 +40,12 @@ YOUTUBE_API_KEY = os.getenv('FASTPASS_YOUTUBE_API_KEY', None)
 YOUTUBE_PLAYLIST_ID = os.getenv('FASTPASS_YOUTUBE_PLAYLIST_ID', None)
 YOUTUBE_EXPIRE_SECONDS = os.getenv('FASTPASS_YOUTUBE_EXPIRE_SECONDS', CACHE_EXPIRE_SECONDS)
 YOUTUBE_THUMBNAIL_QUALITY = os.getenv('FASTPASS_YOUTUBE_THUMBNAIL_QUALITY', 'default')
-BROADCAST_CLIENT_ID = os.getenv('FASTPASS_BROADCAST_CLIENT_ID', None)
-BROADCAST_CLIENT_SECRET = os.getenv('FASTPASS_BROADCAST_CLIENT_SECRET', None)
-BROADCAST_REFRESH_TOKEN = os.getenv('FASTPASS_BROADCAST_REFRESH_TOKEN', None)
+BROADCAST_CLIENT_ID = os.getenv('FASTPASS_BROADCAST_CLIENT_ID', '')
+BROADCAST_CLIENT_SECRET = os.getenv('FASTPASS_BROADCAST_CLIENT_SECRET', '')
+BROADCAST_REFRESH_TOKEN = os.getenv('FASTPASS_BROADCAST_REFRESH_TOKEN', '')
+BROADCAST_UPNT_CLIENT_ID = os.getenv('FASTPASS_BROADCAST_UPNT_CLIENT_ID', '')
+BROADCAST_UPNT_CLIENT_SECRET = os.getenv('FASTPASS_BROADCAST_UPNT_CLIENT_SECRET', '')
+BROADCAST_UPNT_REFRESH_TOKEN = os.getenv('FASTPASS_BROADCAST_UPNT_REFRESH_TOKEN', '')
 BROADCAST_EXPIRE_SECONDS = os.getenv('FASTPASS_BROADCAST_EXPIRE_SECONDS', 600)
 UNLISTED_VIDEO_EXPIRE_SECONDS = os.getenv('FASTPASS_UNLISTED_VIDEO_EXPIRE_SECONDS', 300)
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
@@ -294,6 +297,7 @@ def _get_error_json(path, cache_time=CACHE_EXPIRE_SECONDS):
         data = {}
     return data
 
+
 def _clear_cache(status):
     if status == 'NOT_FULL_OF_SHIT':
         if CACHE_SYSTEM == 'redis':
@@ -322,21 +326,42 @@ def _clear_posts(status):
             return True
     return False
 
-@app.route('/settings')
-def settings_call():
-    if GIT_COMMIT:
-        ver = GIT_COMMIT
-    else:
-        ver = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
-        ver = ver.decode().rstrip()
-    # TODO - Expand with more settings like environment variables.
-    return jsonify({
-        'version': ver,
-        'description': GIT_DESCRIPTION,
-        'deployed_at': GIT_RELEASE_AT,
-        'mem_cache': mem_cache
-    })
 
+def _unlisted_videos(site_code: str, client_id: str, client_secret: str, refresh_token: str):
+    in_delta_minutes = int(request.args.get('delta_minutes', UNLISTED_VIDEO_EXPIRE_SECONDS / 60))
+    if not (client_id and client_secret and refresh_token):
+        return jsonify({})
+    response_list = _get_from_cache(f'unlisted_videos_{site_code}')
+    if not response_list:
+        yb = YoutubeBroadcasts(client_id, client_secret, refresh_token)
+        response_list = yb.get_unlisted_videos(in_delta_minutes)
+        _store_in_cache(f'unlisted_videos_{site_code}', response_list, expire_seconds=UNLISTED_VIDEO_EXPIRE_SECONDS)
+        sm = SlackMessenger()
+        for video in response_list:
+            slack_msg = 'A new video has been uploaded to the {} YouTube Channel and may need a cover image.' \
+                        ' {} https://www.youtube.com/watch?v={}'
+            msg = slack_msg.format(site_code.upper(), video['title'], video['id'])
+            sm.send(msg, f'youtube-{site_code}', 'YouTube Unlisted FastPass ZapBot', ':youtube:')
+    return jsonify(response_list)
+
+
+def _broadcasts(site_code: str, client_id: str, client_secret: str, refresh_token: str):
+    if not (client_id and client_secret and refresh_token):
+        return jsonify({})
+    response_dict = _get_from_cache(f'broadcasts_{site_code}')
+    if not response_dict:
+        yb = YoutubeBroadcasts(client_id, client_secret, refresh_token)
+        response_dict = yb.get_broadcasts()
+        old_response = _get_from_cache(f'broadcasts_{site_code}', include_old=True)
+        old_response = {} if old_response is None else old_response
+        all_upcoming = response_dict['upcoming'] + old_response.get('upcoming', [])
+        response_dict['upcoming'] = list({v['id']: v for v in all_upcoming if v['id'] not in
+                                          [x['id'] for x in response_dict['live']]}.values())
+        _store_in_cache(f'broadcasts_{site_code}', response_dict, expire_seconds=BROADCAST_EXPIRE_SECONDS)
+    return jsonify(response_dict)
+
+
+# Video
 
 @app.route('/youtube')
 def youtube():
@@ -362,19 +387,17 @@ def youtube():
 
 @app.route('/broadcasts', strict_slashes=False)
 def broadcasts():
-    if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
-        return jsonify({})
-    response_dict = _get_from_cache('broadcasts')
-    if not response_dict:
-        yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
-        response_dict = yb.get_broadcasts()
-        old_response = _get_from_cache('broadcasts', include_old=True)
-        old_response = {} if old_response is None else old_response
-        all_upcoming = response_dict['upcoming'] + old_response.get('upcoming', [])
-        response_dict['upcoming'] = list({v['id']: v for v in all_upcoming if v['id'] not in
-                                          [x['id'] for x in response_dict['live']]}.values())
-        _store_in_cache('broadcasts', response_dict, expire_seconds=BROADCAST_EXPIRE_SECONDS)
-    return jsonify(response_dict)
+    return redirect('/wdwnt/broadcasts')
+
+
+@app.route('/wdwnt/broadcasts', strict_slashes=False)
+def wdwnt_broadcasts():
+    return _broadcasts('wdwnt', BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
+
+
+@app.route('/upnt/broadcasts', strict_slashes=False)
+def upnt_broadcasts():
+    return _broadcasts('upnt', BROADCAST_UPNT_CLIENT_ID, BROADCAST_UPNT_CLIENT_SECRET, BROADCAST_UPNT_REFRESH_TOKEN)
 
 
 @app.route('/broadcasts/wigs', strict_slashes=False)
@@ -402,6 +425,24 @@ def debug_broadcasts():
     response_dict = yb.get_broadcasts(show_unlisted=True, debug=True)
     return jsonify(response_dict)
 
+
+@app.route('/unlisted_videos', strict_slashes=False)
+def unlisted_videos():
+    return redirect('/wdwnt/unlisted_videos')
+
+
+@app.route('/wdwnt/unlisted_videos', strict_slashes=False)
+def wdwnt_unlisted_videos():
+    return _unlisted_videos('wdwnt', BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
+
+
+@app.route('/upnt/unlisted_videos', strict_slashes=False)
+def upnt_unilisted_videos():
+    return _unlisted_videos('upnt', BROADCAST_UPNT_CLIENT_ID, BROADCAST_UPNT_CLIENT_SECRET,
+                            BROADCAST_UPNT_REFRESH_TOKEN)
+
+
+# Podcasts
 
 @app.route('/podcasts', strict_slashes=False)
 def podcasts():
@@ -438,6 +479,8 @@ def single_podcast(post_id):
         _store_in_cache(cache_url, response_dict)
     return jsonify(response_dict)
 
+
+# Blog posts, pages, and utilities
 
 @app.route('/posts', strict_slashes=False)
 def posts():
@@ -549,31 +592,7 @@ def notifications():
     return jsonify(response_dict)
 
 
-@app.route('/radio')
-def radio():
-    url = 'https://wdwnt.airtime.pro/api/live-info'
-    response_dict = _get_from_cache(url)
-    if not response_dict:
-        response = requests.get(url)
-        try:
-            response.raise_for_status()
-            response_dict = format_airtime(response.json())
-        except requests.exceptions.HTTPError:
-            _store_in_cache(url, {}, expire_seconds=CACHE_EXPIRE_SECONDS)
-            return jsonify({})
-        if response_dict['current']['type'] == 'livestream':
-            expiry = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
-            expiry = expiry.replace(tzinfo=timezone.utc)
-            response_dict['current']['ends'] = expiry
-            response_dict['current']['metadata']['length'] = str(timedelta(seconds=CACHE_EXPIRE_SECONDS))
-            _store_in_cache(url, response_dict)
-        else:
-            ending = parser.parse(response_dict['current']['ends'])
-            ending = ending.replace(tzinfo=timezone.utc)
-            # pprint(ending)
-            _store_in_cache(url, response_dict, expire_time=ending)
-    return jsonify(response_dict)
-
+# Live365
 
 @app.route('/live365')
 def live365():
@@ -604,6 +623,8 @@ def live365():
     return jsonify(response_dict)
 
 
+# Internal Utilities
+
 @app.route('/clear', methods=['POST'])
 def clear_cache():
     data = request.json
@@ -626,23 +647,20 @@ def clear_posts():
     return ('', 204) if resp else (jsonify({'status': 'Invalid status'}), 401)
 
 
-@app.route('/unlisted_videos')
-def unlisted_videos():
-    in_delta_minutes = int(request.args.get('delta_minutes', UNLISTED_VIDEO_EXPIRE_SECONDS/60))
-    if not (BROADCAST_CLIENT_ID and BROADCAST_CLIENT_SECRET and BROADCAST_REFRESH_TOKEN):
-        return jsonify({})
-    response_list = _get_from_cache('unlisted_videos')
-    if not response_list:
-        yb = YoutubeBroadcasts(BROADCAST_CLIENT_ID, BROADCAST_CLIENT_SECRET, BROADCAST_REFRESH_TOKEN)
-        response_list = yb.get_unlisted_videos(in_delta_minutes)
-        _store_in_cache('unlisted_videos', response_list, expire_seconds=UNLISTED_VIDEO_EXPIRE_SECONDS)
-        sm = SlackMessenger()
-        for video in response_list:
-            slack_msg = 'A new video has been uploaded to the WDWNT YouTube Channel and may need a cover image.' \
-                        ' {} https://www.youtube.com/watch?v={}'
-            msg = slack_msg.format(video['title'], video['id'])
-            sm.send(msg, 'youtube-wdwnt', 'YouTube Unlisted FastPass ZapBot', ':youtube:')
-    return jsonify(response_list)
+@app.route('/settings')
+def settings_call():
+    if GIT_COMMIT:
+        ver = GIT_COMMIT
+    else:
+        ver = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
+        ver = ver.decode().rstrip()
+    # TODO - Expand with more settings like environment variables.
+    return jsonify({
+        'version': ver,
+        'description': GIT_DESCRIPTION,
+        'deployed_at': GIT_RELEASE_AT,
+        'mem_cache': mem_cache
+    })
 
 
 @app.route('/')
