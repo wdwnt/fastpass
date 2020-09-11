@@ -33,6 +33,7 @@ def _setup_appflags():
 
 CACHE_EXPIRE_SECONDS = os.getenv('FASTPASS_CACHE_EXPIRE_SECONDS', 180)
 CACHE_SYSTEM = os.getenv('FASTPASS_CACHE_SYSTEM', 'memory')
+TIMEOUT_SECONDS = os.getenv('FASTPASS_TIMEOUT_SECONDS', 5)
 SERVER_PORT = os.getenv('FASTPASS_HOST_PORT', 5000)
 POSTS_PER_PAGE = os.getenv('FASTPASS_POSTS_PER_PAGE', 30)
 YOUTUBE_VIDS_PER_PAGE = os.getenv('FASTPASS_YOUTUBE_VIDS_PER_PAGE', 30)
@@ -48,6 +49,7 @@ BROADCAST_UPNT_CLIENT_SECRET = os.getenv('FASTPASS_BROADCAST_UPNT_CLIENT_SECRET'
 BROADCAST_UPNT_REFRESH_TOKEN = os.getenv('FASTPASS_BROADCAST_UPNT_REFRESH_TOKEN', '')
 BROADCAST_EXPIRE_SECONDS = os.getenv('FASTPASS_BROADCAST_EXPIRE_SECONDS', 600)
 UNLISTED_VIDEO_EXPIRE_SECONDS = os.getenv('FASTPASS_UNLISTED_VIDEO_EXPIRE_SECONDS', 300)
+LIVE365_EXPIRE_SECONDS = os.getenv('FASTPASS_LIVE365_EXPIRE_SECONDS', 30)
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
@@ -599,26 +601,29 @@ def live365():
     url = 'https://api.live365.com/station/a31769'
     response_dict = _get_from_cache(url)
     if not response_dict:
-        response = requests.get(url)
+        response = requests.get(url, timeout=TIMEOUT_SECONDS)
         try:
             response.raise_for_status()
             response_dict = format_live365(response.json())
         except requests.exceptions.HTTPError:
             err_resp = _get_error_json(request.path)
-            _store_in_cache(url, err_resp, expire_seconds=CACHE_EXPIRE_SECONDS)
+            _store_in_cache(url, err_resp, expire_seconds=LIVE365_EXPIRE_SECONDS)
             return jsonify(err_resp)
+        calc_end_time = datetime.utcnow() + timedelta(seconds=LIVE365_EXPIRE_SECONDS)
+        calc_end_time = calc_end_time.replace(tzinfo=timezone.utc)
         if response_dict['live_dj_on']:
-            expiry = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
-            expiry = expiry.replace(tzinfo=timezone.utc)
-            response_dict['current-track']['end'] = expiry
-            response_dict['current-track']['duration'] = str(timedelta(seconds=CACHE_EXPIRE_SECONDS))
+            response_dict['current-track']['end'] = calc_end_time
+            response_dict['current-track']['duration'] = str(timedelta(seconds=LIVE365_EXPIRE_SECONDS))
             _store_in_cache(url, response_dict)
         else:
             if response_dict['current-track'].get('end') is None:
-                ending = datetime.utcnow() + timedelta(seconds=CACHE_EXPIRE_SECONDS)
-                ending = ending.replace(tzinfo=timezone.utc)
+                ending = calc_end_time
             else:
-                ending = parser.parse(response_dict['current-track']['end'])
+                track_end = parser.parse(response_dict['current-track']['end'])
+                if track_end < calc_end_time:
+                    ending = track_end
+                else:
+                    ending = calc_end_time
             _store_in_cache(url, response_dict, expire_time=ending)
     return jsonify(response_dict)
 
