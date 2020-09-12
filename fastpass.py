@@ -618,12 +618,15 @@ def live365():
         else:
             if response_dict['current-track'].get('end') is None:
                 ending = calc_end_time
+                response_dict['current-track']['end'] = calc_end_time
             else:
                 track_end = parser.parse(response_dict['current-track']['end'])
                 if track_end < calc_end_time:
                     ending = track_end
                 else:
                     ending = calc_end_time
+                    # Replace ending so that it checks more frequently.
+                    response_dict['current-track']['end'] = calc_end_time
             _store_in_cache(url, response_dict, expire_time=ending)
     return jsonify(response_dict)
 
