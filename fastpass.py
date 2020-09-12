@@ -612,7 +612,7 @@ def live365():
         calc_end_time = datetime.utcnow() + timedelta(seconds=LIVE365_EXPIRE_SECONDS)
         calc_end_time = calc_end_time.replace(tzinfo=timezone.utc)
         if response_dict['live_dj_on']:
-            response_dict['current-track']['end'] = calc_end_time
+            response_dict['current-track']['end'] = calc_end_time.isoformat()
             response_dict['current-track']['duration'] = str(timedelta(seconds=LIVE365_EXPIRE_SECONDS))
             _store_in_cache(url, response_dict)
         else:
