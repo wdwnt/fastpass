@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 import requests
 import redis
 from ftfy import fix_text
-from flask import Flask, jsonify, request, redirect, url_for
+from flask import Flask, jsonify, request, redirect
 from jinja2 import Environment, PackageLoader
 from flask_cors import CORS
 from bs4 import BeautifulSoup
@@ -50,6 +50,7 @@ BROADCAST_UPNT_REFRESH_TOKEN = os.getenv('FASTPASS_BROADCAST_UPNT_REFRESH_TOKEN'
 BROADCAST_EXPIRE_SECONDS = os.getenv('FASTPASS_BROADCAST_EXPIRE_SECONDS', 600)
 UNLISTED_VIDEO_EXPIRE_SECONDS = os.getenv('FASTPASS_UNLISTED_VIDEO_EXPIRE_SECONDS', 300)
 LIVE365_EXPIRE_SECONDS = os.getenv('FASTPASS_LIVE365_EXPIRE_SECONDS', 30)
+NTUNES_AUDIO_URL = os.getenv('FASTPASS_NTUNES_AUDIO_URL', '')
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
 REDIS_PASSWORD = os.getenv('FASTPASS_REDIS_PASSWORD', '')
@@ -628,6 +629,12 @@ def live365():
                     # Replace ending so that it checks more frequently.
                     response_dict['current-track']['end'] = calc_end_time.isoformat()
             _store_in_cache(url, response_dict, expire_time=ending)
+    return jsonify(response_dict)
+
+
+@app.route('/ntunes')
+def ntunes():
+    response_dict = {'url': NTUNES_AUDIO_URL}
     return jsonify(response_dict)
 
 
