@@ -123,7 +123,7 @@ def format_wp(in_data, with_content=False, with_player=True):
         obj['title'] = html.unescape(post.get('title', {}).get('rendered', ''))
         obj['date'] = post.get('date_gmt')
         authors = post.get('_embedded', {}).get('author', [])
-        obj['author']['name'] = ','.join([x.get('name') for x in authors])
+        obj['author']['name'] = ','.join([x.get('name', '') for x in authors])
 
         media = post.get('_embedded', {}).get('wp:featuredmedia', [])
         if media:
