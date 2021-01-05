@@ -516,6 +516,31 @@ def posts():
     return jsonify(response_dict)
 
 
+@app.route('/cpt/<cpt_type>', strict_slashes=False)
+@app.route('/cpt/<cpt_type>/<int:cpt_id>', strict_slashes=False)
+def cpt(cpt_type, cpt_id=None):
+    if not cpt_type:
+        return jsonify({})
+    in_per_page = request.args.get('per_page', POSTS_PER_PAGE)
+    in_page = request.args.get('page', 1)
+    if cpt_id:
+        url = f'https://wdwnt.com/wp-json/wp/v2/{cpt_type}/{cpt_id}?_embed'
+    else:
+        url = f'https://wdwnt.com/wp-json/wp/v2/{cpt_type}?per_page={in_per_page}&page={in_page}&_embed'
+
+    response_dict = _get_from_cache(url)
+    if not response_dict:
+        response = requests.get(url, headers=WP_HEADER)
+        if response.status_code == 404:
+            response_dict = {}
+        elif cpt_id:
+            response_dict = format_wp_single_post(response.json())
+        else:
+            response_dict = format_wp(response.json())
+        _store_in_cache(url, response_dict)
+    return jsonify(response_dict)
+
+
 @app.route('/posts/<int:post_id>')
 def single_post(post_id):
     # Do something with page_id
