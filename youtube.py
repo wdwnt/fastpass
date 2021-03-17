@@ -94,7 +94,7 @@ class YoutubeBroadcasts(object):
     @staticmethod
     def _last_completed(all_broadcasts):
         return max(filter(lambda x: x['live_status'] == 'complete', all_broadcasts),
-                   key=lambda x: parse(x['air_time']))
+                   key=lambda x: parse(x['air_time']),default=0)
 
     def get_broadcasts(self, show_unlisted=False, debug=False):
         all_broadcasts = []
