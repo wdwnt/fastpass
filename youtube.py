@@ -109,12 +109,15 @@ class YoutubeBroadcasts(object):
         for x in all_broadcasts:
             if not show_unlisted and x['status']['privacyStatus'] == 'unlisted':
                 continue
-            obj = {'air_time': x['snippet']['scheduledStartTime'],
-                   'title': x['snippet']['title'],
-                   'live_status': x['status']['lifeCycleStatus'],
-                   'privacy': x['status']['privacyStatus'], 'id': x['id']}
-            video_for_id[x['id']] = x
-            all_objs.append(obj)
+            try:
+                obj = {'air_time': x['snippet']['scheduledStartTime'],
+                       'title': x['snippet']['title'],
+                       'live_status': x['status']['lifeCycleStatus'],
+                       'privacy': x['status']['privacyStatus'], 'id': x['id']}
+                video_for_id[x['id']] = x
+                all_objs.append(obj)
+            except:
+                pass
         if debug:
             return all_objs
         live = self._live_broadcasts(all_objs)
