@@ -53,6 +53,7 @@ BROADCAST_ENTERTAINMENT_REFRESH_TOKEN = os.getenv('FASTPASS_BROADCAST_ENTERTAINM
 BROADCAST_EXPIRE_SECONDS = os.getenv('FASTPASS_BROADCAST_EXPIRE_SECONDS', 600)
 UNLISTED_VIDEO_EXPIRE_SECONDS = os.getenv('FASTPASS_UNLISTED_VIDEO_EXPIRE_SECONDS', 300)
 LIVE365_EXPIRE_SECONDS = os.getenv('FASTPASS_LIVE365_EXPIRE_SECONDS', 30)
+INSTAGRAM_EXPIRE_SECONDS = os.getenv('FASTPASS_INSTAGRAM_EXPIRE_SECONDS', 450)
 NTUNES_AUDIO_URL = os.getenv('FASTPASS_NTUNES_AUDIO_URL', '')
 REDIS_HOST = os.getenv('FASTPASS_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = os.getenv('FASTPASS_REDIS_PORT', 36379)
@@ -631,6 +632,18 @@ def notifications():
         _store_in_cache(url, response_dict)
     return jsonify(response_dict)
 
+# Instagram via RSSHub
+
+@app.route('/instagram/<string:username>', strict_slashes=False)
+def instagram(username):
+    url = 'https://rsshub.app/picuki/profile/{}'
+    url = url.format(username)
+    response_string = _get_from_cache(url)
+    if not response_string:
+        response = requests.get(url)
+        response_string = response.text
+        _store_in_cache(url, response_string, expire_seconds=INSTAGRAM_EXPIRE_SECONDS)
+    return response_string
 
 # Live365
 
